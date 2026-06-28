@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+html,
+body {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+  background: #f6f7f9;
+}
+
+body {
+  font-family: "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+}
+
+.app-frame {
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  background: #f6f7f9;
+}
+
+.money-note-frame {
+  display: block;
+  width: 100%;
+  min-height: 100dvh;
+  border: 0;
+  background: #f6f7f9;
+}

@@ -1,0 +1,17 @@
+{
+  "name": "두드림 머니노트",
+  "short_name": "머니노트",
+  "description": "강의 수입, 지출, 사업투자를 관리하는 개인용 돈관리 앱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#087b73",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

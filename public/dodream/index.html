@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>두드림 머니노트</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">D</div>
+          <div>
+            <h1>두드림 머니노트</h1>
+            <p id="todayLabel">개인 돈관리</p>
+          </div>
+        </div>
+        <div class="header-actions" aria-label="데이터 관리">
+          <button class="icon-button" id="exportJsonBtn" type="button" title="백업">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v10m0 0 4-4m-4 4-4-4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/>
+            </svg>
+          </button>
+          <button class="icon-button" id="importJsonBtn" type="button" title="불러오기">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21V11m0 0 4 4m-4-4-4 4M5 9V6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/>
+            </svg>
+          </button>
+          <input id="importFile" type="file" accept="application/json" hidden>
+        </div>
+      </header>
+
+      <main>
+        <section class="month-panel" aria-labelledby="monthTitle">
+          <button class="icon-button" id="prevMonthBtn" type="button" title="이전 달">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+          </button>
+          <div>
+            <h2 id="monthTitle">이번 달</h2>
+            <input id="monthInput" type="month" aria-label="기준 월">
+          </div>
+          <button class="icon-button" id="nextMonthBtn" type="button" title="다음 달">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m9 18 6-6-6-6"/>
+            </svg>
+          </button>
+        </section>
+
+        <section class="summary-grid" aria-label="월별 현황">
+          <article class="metric-card metric-income">
+            <span>입금완료</span>
+            <strong id="receivedIncome">0원</strong>
+          </article>
+          <article class="metric-card metric-pending">
+            <span>입금예정</span>
+            <strong id="pendingIncome">0원</strong>
+          </article>
+          <article class="metric-card metric-business">
+            <span>사업지출</span>
+            <strong id="businessExpense">0원</strong>
+          </article>
+          <article class="metric-card metric-personal">
+            <span>개인지출</span>
+            <strong id="personalExpense">0원</strong>
+          </article>
+          <article class="metric-card metric-invest">
+            <span>사업투자</span>
+            <strong id="investmentTotal">0원</strong>
+          </article>
+          <article class="metric-card metric-net">
+            <span>실제 남은 돈</span>
+            <strong id="cashLeft">0원</strong>
+          </article>
+        </section>
+
+        <section class="entry-panel" aria-labelledby="entryTitle">
+          <div class="section-heading">
+            <h2 id="entryTitle">기록하기</h2>
+            <button class="text-button compact" id="cancelEditBtn" type="button" hidden>수정 취소</button>
+          </div>
+
+          <div class="segmented-control" role="tablist" aria-label="기록 종류">
+            <button class="segment active" type="button" data-type="income">수입</button>
+            <button class="segment" type="button" data-type="expense">지출</button>
+            <button class="segment" type="button" data-type="investment">투자</button>
+          </div>
+
+          <div class="template-row" id="templateRow" aria-label="빠른 선택"></div>
+
+          <form id="recordForm" class="record-form">
+            <input id="recordId" type="hidden">
+
+            <div class="form-grid income-fields">
+              <label>
+                <span>강의일</span>
+                <input id="lectureDate" type="date">
+              </label>
+              <label>
+                <span id="paymentDateLabel">입금일</span>
+                <input id="paymentDate" type="date">
+              </label>
+            </div>
+
+            <div class="form-grid standard-date-row" hidden>
+              <label>
+                <span>사용일</span>
+                <input id="recordDate" type="date">
+              </label>
+              <label>
+                <span>구분</span>
+                <select id="scope">
+                  <option value="business">사업</option>
+                  <option value="personal">개인</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                <span>금액</span>
+                <input id="amount" type="number" min="0" step="1000" inputmode="numeric" placeholder="0">
+              </label>
+              <label>
+                <span>항목</span>
+                <select id="category"></select>
+              </label>
+            </div>
+
+            <label>
+              <span id="titleLabel">기관/강의명</span>
+              <input id="title" type="text" placeholder="예: 여성인력개발센터 ChatGPT 특강">
+            </label>
+
+            <div class="form-grid income-fields">
+              <label>
+                <span>입금 상태</span>
+                <select id="incomeStatus">
+                  <option value="received">입금완료</option>
+                  <option value="pending">입금예정</option>
+                </select>
+              </label>
+              <label>
+                <span>차수</span>
+                <input id="sessionCount" type="number" min="1" step="1" inputmode="numeric" placeholder="1">
+              </label>
+            </div>
+
+            <label>
+              <span>메모</span>
+              <textarea id="memo" rows="2" placeholder="필요한 내용만 짧게"></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="primary-button" id="saveRecordBtn" type="submit">저장</button>
+              <button class="text-button" id="resetFormBtn" type="button">비우기</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="split-section">
+          <article class="panel" aria-labelledby="pendingTitle">
+            <div class="section-heading">
+              <h2 id="pendingTitle">입금 예정</h2>
+              <span id="pendingCount" class="count-pill">0건</span>
+            </div>
+            <div id="pendingList" class="list-stack"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="lessonIncomeTitle">
+            <div class="section-heading">
+              <h2 id="lessonIncomeTitle">강의별 수입</h2>
+              <span id="lessonIncomeCount" class="count-pill">0건</span>
+            </div>
+            <div id="lessonIncomeList" class="list-stack"></div>
+          </article>
+
+          <article class="panel" aria-labelledby="insightTitle">
+            <div class="section-heading">
+              <h2 id="insightTitle">월별 분석</h2>
+              <button class="text-button compact" id="exportCsvBtn" type="button">CSV</button>
+            </div>
+            <div class="insight-grid">
+              <div>
+                <h3>기관별 수입</h3>
+                <div id="incomeBars" class="bar-list"></div>
+              </div>
+              <div>
+                <h3>지출/투자 항목</h3>
+                <div id="outgoingBars" class="bar-list"></div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="panel" aria-labelledby="recordsTitle">
+          <div class="section-heading records-heading">
+            <h2 id="recordsTitle">기록 목록</h2>
+            <div class="filter-row" aria-label="목록 필터">
+              <button class="filter-chip active" type="button" data-filter="all">전체</button>
+              <button class="filter-chip" type="button" data-filter="income">수입</button>
+              <button class="filter-chip" type="button" data-filter="expense">지출</button>
+              <button class="filter-chip" type="button" data-filter="investment">투자</button>
+            </div>
+          </div>
+          <div id="recordsList" class="list-stack records-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
