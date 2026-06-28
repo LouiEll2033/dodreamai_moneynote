@@ -4,7 +4,8 @@ const categories = {
   income: [
     "여성인력개발센터",
     "두정평생학습관",
-    "초등 방과후",
+    "성환초등학교",
+    "월봉초등학교",
     "특강",
     "콘텐츠 수익",
     "기타 수입",
@@ -32,7 +33,8 @@ const templates = {
   income: [
     { category: "여성인력개발센터", title: "여성인력개발센터 생성형AI 강의" },
     { category: "두정평생학습관", title: "두정평생학습관 생성형AI 강의" },
-    { category: "초등 방과후", title: "초등 방과후 컴퓨터 수업" },
+    { category: "성환초등학교", title: "성환초등학교 방과후 컴퓨터 수업" },
+    { category: "월봉초등학교", title: "월봉초등학교 방과후 컴퓨터 수업" },
     { category: "특강", title: "생성형AI 특강" },
   ],
   expense: [
