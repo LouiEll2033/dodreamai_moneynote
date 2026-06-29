@@ -84,7 +84,7 @@
           <div class="section-heading">
             <div>
               <h2 id="calendarIncomeTitle">캘린더 강의 수익</h2>
-              <p class="section-note">강의 일정별 금액과 입금 완료를 관리합니다.</p>
+              <p class="section-note">빨간색 강의 일정 · 월별 그룹 수익</p>
             </div>
             <button class="text-button compact" id="importCalendarBtn" type="button">일정 가져오기</button>
           </div>
@@ -108,6 +108,33 @@
             <span id="calendarIncomeCount" class="count-pill">0건</span>
             <button class="text-button compact" id="clearCalendarMonthBtn" type="button">이번 달 비우기</button>
           </div>
+
+          <details class="calendar-add-box">
+            <summary>직접 추가</summary>
+            <form id="calendarAddForm" class="calendar-add-form">
+              <label class="calendar-add-title">
+                <span>강의명</span>
+                <input id="calendarAddTitle" type="text" placeholder="예: 성환초방과후">
+              </label>
+              <label>
+                <span>항목</span>
+                <select id="calendarAddCategory"></select>
+              </label>
+              <label>
+                <span>횟수</span>
+                <input id="calendarAddCount" type="number" min="1" step="1" inputmode="numeric" value="1">
+              </label>
+              <label>
+                <span>수익</span>
+                <input id="calendarAddAmount" type="number" min="0" step="1000" inputmode="numeric" placeholder="0">
+              </label>
+              <label class="calendar-add-paid">
+                <input id="calendarAddPaid" type="checkbox">
+                <span>입금 완료</span>
+              </label>
+              <button class="primary-button" type="submit">추가</button>
+            </form>
+          </details>
 
           <div id="calendarIncomeList" class="calendar-list"></div>
         </section>

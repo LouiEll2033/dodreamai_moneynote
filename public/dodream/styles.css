@@ -438,6 +438,49 @@ button:focus-visible {
   margin-bottom: 10px;
 }
 
+.calendar-add-box {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.calendar-add-box summary {
+  min-height: 38px;
+  padding: 9px 11px;
+  cursor: pointer;
+  color: var(--teal-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.calendar-add-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(92px, 0.8fr);
+  gap: 8px;
+  border-top: 1px solid var(--line);
+  padding: 10px;
+}
+
+.calendar-add-title {
+  grid-column: 1 / -1;
+}
+
+.calendar-add-paid {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+}
+
+.calendar-add-paid input {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+  accent-color: var(--teal);
+}
+
 .calendar-list {
   display: grid;
   gap: 8px;
@@ -445,7 +488,7 @@ button:focus-visible {
 
 .calendar-income-item {
   display: grid;
-  grid-template-columns: 1fr 92px;
+  grid-template-columns: minmax(0, 1fr) 96px;
   gap: 8px;
   align-items: center;
   border: 1px solid var(--line);
@@ -464,8 +507,7 @@ button:focus-visible {
   min-width: 0;
 }
 
-.calendar-info strong,
-.calendar-info span {
+.calendar-info strong {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -477,9 +519,11 @@ button:focus-visible {
 }
 
 .calendar-info span {
+  display: block;
   margin-top: 4px;
   color: var(--muted);
   font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .calendar-amount-label {
@@ -496,9 +540,16 @@ button:focus-visible {
   text-align: right;
 }
 
-.paid-check {
+.calendar-item-actions {
   display: flex;
   grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.paid-check {
+  display: flex;
   align-items: center;
   gap: 7px;
   min-height: 28px;
@@ -512,6 +563,10 @@ button:focus-visible {
   min-height: 18px;
   height: 18px;
   accent-color: var(--teal);
+}
+
+.calendar-delete-button {
+  flex: 0 0 32px;
 }
 
 .split-section {
@@ -894,6 +949,14 @@ button:focus-visible {
 
   .metric-card strong {
     font-size: 0.78rem;
+  }
+
+  .calendar-add-form {
+    grid-template-columns: 1fr 86px;
+  }
+
+  .calendar-income-item {
+    grid-template-columns: minmax(0, 1fr) 88px;
   }
 
   .money-item {
