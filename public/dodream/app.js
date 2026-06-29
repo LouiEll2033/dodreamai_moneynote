@@ -1,6 +1,6 @@
 const STORAGE_KEY = "dodreamMoneyNote.records.v1";
 const CALENDAR_STORAGE_KEY = "dodreamMoneyNote.calendarIncome.v1";
-const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260629.liveRed";
+const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260629.liveRedFromMay";
 const RED_CALENDAR_COLOR_ID = "11";
 
 const categories = {
@@ -56,7 +56,8 @@ const templates = {
 
 const calendarSeedEvents = [
   ...makeSeedEvents("성환초방과후", "성환초등학교", [
-    "2026-06-01", "2026-06-05", "2026-06-08", "2026-06-12", "2026-06-15",
+    "2026-05-08", "2026-05-11", "2026-05-15", "2026-05-18", "2026-05-22",
+    "2026-05-29", "2026-06-01", "2026-06-05", "2026-06-08", "2026-06-12", "2026-06-15",
     "2026-06-19", "2026-06-22", "2026-06-26", "2026-06-29", "2026-07-03",
     "2026-07-06", "2026-07-10", "2026-07-13", "2026-07-20", "2026-07-24",
     "2026-07-27", "2026-08-24", "2026-08-28", "2026-08-31", "2026-09-04",
@@ -69,6 +70,7 @@ const calendarSeedEvents = [
     "2026-12-21", "2026-12-25", "2026-12-28",
   ], "13:00", "15:30"),
   ...makeSeedEvents("월봉초코딩", "월봉초등학교", [
+    "2026-05-06", "2026-05-13", "2026-05-20", "2026-05-27",
     "2026-06-10", "2026-06-17", "2026-06-24", "2026-07-01", "2026-07-08",
     "2026-07-15", "2026-07-22", "2026-08-26", "2026-09-02", "2026-09-09",
     "2026-09-16", "2026-09-23", "2026-09-30", "2026-10-07", "2026-10-14",
@@ -77,16 +79,27 @@ const calendarSeedEvents = [
     "2026-12-30",
   ], "14:00", "15:20"),
   ...makeSeedEvents("ChatGPT 활용 글짓기", "두정평생학습관", [
+    "2026-05-08", "2026-05-15", "2026-05-22", "2026-05-29",
     "2026-06-05", "2026-06-12", "2026-06-19", "2026-06-26", "2026-07-03",
     "2026-08-10", "2026-08-24", "2026-08-31", "2026-09-07", "2026-09-14",
     "2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12", "2026-10-19",
     "2026-10-26", "2026-11-02", "2026-11-09", "2026-11-20", "2026-11-27",
   ], "10:00", "12:00"),
   ...makeSeedEvents("아청문 CDT", "특강", [
+    "2026-05-07", "2026-05-14", "2026-05-21",
     "2026-09-03", "2026-09-10", "2026-09-17", "2026-09-24", "2026-10-01",
     "2026-10-08", "2026-10-15", "2026-10-22", "2026-10-29", "2026-11-05",
     "2026-11-12", "2026-11-19",
   ], "17:30", "19:30"),
+  { title: "두평학들르기_서명", category: "두정평생학습관", date: "2026-05-04", startTime: "11:00", endTime: "11:30" },
+  { title: "예산군여성회관_업무효율화", category: "특강", date: "2026-05-06", startTime: "09:30", endTime: "12:30" },
+  { title: "여성인력_콘텐츠만들기반", category: "여성인력개발센터", date: "2026-05-07", startTime: "14:00", endTime: "16:00" },
+  { title: "여성인력_콘텐츠만들기반", category: "여성인력개발센터", date: "2026-05-14", startTime: "14:00", endTime: "16:00" },
+  { title: "여성인력_콘텐츠만들기반", category: "여성인력개발센터", date: "2026-05-21", startTime: "13:00", endTime: "16:00" },
+  ...makeSeedEvents("다문화센터교육", "특강", [
+    "2026-05-19", "2026-05-26",
+  ], "10:00", "13:00"),
+  { title: "청복커체험부스", category: "특강", date: "2026-05-30", startTime: "10:00", endTime: "16:00" },
   { title: "태조산진로직업체험 박람회_부스", category: "특강", date: "2026-06-04", startTime: "", endTime: "" },
   { title: "태조산부스운영", category: "특강", date: "2026-06-04", startTime: "07:30", endTime: "16:00" },
   { title: "cDT코딩 결과 발표 일", category: "특강", date: "2026-06-05", startTime: "", endTime: "" },
@@ -1115,7 +1128,11 @@ function calendarCanonicalTitle(title) {
   if (value.includes("월봉초") || value.includes("월봉초방과후")) return "월봉초코딩";
   if (value.includes("chatgpt") || (value.includes("chat") && value.includes("글짓기"))) return "ChatGPT 활용 글짓기";
   if (value.includes("아청문") && value.includes("cdt")) return "아청문 CDT";
+  if (value.includes("여성인력") && value.includes("콘텐츠만들기반")) return "여성인력_콘텐츠만들기반";
   if (value.includes("여성인력") && value.includes("생성형ai")) return "여성인력_생성형AI";
+  if (value.includes("예산군여성회관")) return "예산군여성회관_업무효율화";
+  if (value.includes("다문화센터교육")) return "다문화센터교육";
+  if (value.includes("청복커체험부스")) return "청복커체험부스";
   if (value.includes("백석대앵커사업단")) return "백석대앵커사업단_천안시통합돌봄센터";
   if (value.includes("복합커뮤니티센터") && value.includes("돌봄")) return "복합커뮤니티센터_돌봄";
   if (value.includes("복합커뮤니티센터")) return "복합커뮤니티센터";
@@ -1126,7 +1143,7 @@ function isRedCalendarItem(item) {
   const title = String(item.title || "");
   const category = item.category || guessCalendarCategory(title);
   const normalizedTitle = normalizeCalendarText(title);
-  if (!normalizedTitle || normalizedTitle.includes("콘텐츠")) return false;
+  if (!normalizedTitle || normalizedTitle.includes("콘텐츠수업")) return false;
   if (item.colorId && String(item.colorId) !== RED_CALENDAR_COLOR_ID) return false;
   return (
     String(item.colorId || "") === RED_CALENDAR_COLOR_ID ||
@@ -1145,10 +1162,14 @@ function isKnownRedClassTitle(title) {
     "chatgpt활용글짓기",
     "chatgptgpt활용글짓기",
     "아청문cdt",
+    "두평학들르기서명",
+    "예산군여성회관업무효율화",
+    "여성인력콘텐츠만들기반",
     "태조산진로직업체험박람회부스",
     "태조산부스운영",
     "cdt코딩결과발표일",
     "다문화보조",
+    "다문화센터교육",
     "부여교원연수vids",
     "다문화센터이미지만들기강의",
     "다문화센터블로그강의",
@@ -1158,6 +1179,7 @@ function isKnownRedClassTitle(title) {
     "복합커뮤니티센터",
     "복합커뮤니티센터돌봄",
     "여성인력생성형ai",
+    "청복커체험부스",
     "백석대앵커사업단천안시통합돌봄센터",
   ].some((keyword) => value.includes(normalizeCalendarText(keyword)));
 }
