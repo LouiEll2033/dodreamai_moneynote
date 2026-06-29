@@ -141,13 +141,12 @@
 
         <section class="entry-panel" aria-labelledby="entryTitle">
           <div class="section-heading">
-            <h2 id="entryTitle">기록하기</h2>
+            <h2 id="entryTitle">지출·투자 기록하기</h2>
             <button class="text-button compact" id="cancelEditBtn" type="button" hidden>수정 취소</button>
           </div>
 
           <div class="segmented-control" role="tablist" aria-label="기록 종류">
-            <button class="segment active" type="button" data-type="income">수입</button>
-            <button class="segment" type="button" data-type="expense">지출</button>
+            <button class="segment active" type="button" data-type="expense">지출</button>
             <button class="segment" type="button" data-type="investment">투자</button>
           </div>
 
@@ -156,18 +155,7 @@
           <form id="recordForm" class="record-form">
             <input id="recordId" type="hidden">
 
-            <div class="form-grid income-fields">
-              <label>
-                <span>강의일</span>
-                <input id="lectureDate" type="date">
-              </label>
-              <label>
-                <span id="paymentDateLabel">입금일</span>
-                <input id="paymentDate" type="date">
-              </label>
-            </div>
-
-            <div class="form-grid standard-date-row" hidden>
+            <div class="form-grid standard-date-row">
               <label>
                 <span>사용일</span>
                 <input id="recordDate" type="date">
@@ -193,23 +181,9 @@
             </div>
 
             <label>
-              <span id="titleLabel">기관/강의명</span>
-              <input id="title" type="text" placeholder="예: 여성인력개발센터 ChatGPT 특강">
+              <span id="titleLabel">사용 내용</span>
+              <input id="title" type="text" placeholder="예: 강의 이동 교통비">
             </label>
-
-            <div class="form-grid income-fields">
-              <label>
-                <span>입금 상태</span>
-                <select id="incomeStatus">
-                  <option value="received">입금완료</option>
-                  <option value="pending">입금예정</option>
-                </select>
-              </label>
-              <label>
-                <span>차수</span>
-                <input id="sessionCount" type="number" min="1" step="1" inputmode="numeric" placeholder="1">
-              </label>
-            </div>
 
             <label>
               <span>메모</span>
@@ -224,22 +198,6 @@
         </section>
 
         <section class="split-section">
-          <article class="panel" aria-labelledby="pendingTitle">
-            <div class="section-heading">
-              <h2 id="pendingTitle">입금 예정</h2>
-              <span id="pendingCount" class="count-pill">0건</span>
-            </div>
-            <div id="pendingList" class="list-stack"></div>
-          </article>
-
-          <article class="panel" aria-labelledby="lessonIncomeTitle">
-            <div class="section-heading">
-              <h2 id="lessonIncomeTitle">강의별 수입</h2>
-              <span id="lessonIncomeCount" class="count-pill">0건</span>
-            </div>
-            <div id="lessonIncomeList" class="list-stack"></div>
-          </article>
-
           <article class="panel" aria-labelledby="insightTitle">
             <div class="section-heading">
               <h2 id="insightTitle">월별 분석</h2>
@@ -263,7 +221,6 @@
             <h2 id="recordsTitle">기록 목록</h2>
             <div class="filter-row" aria-label="목록 필터">
               <button class="filter-chip active" type="button" data-filter="all">전체</button>
-              <button class="filter-chip" type="button" data-filter="income">수입</button>
               <button class="filter-chip" type="button" data-filter="expense">지출</button>
               <button class="filter-chip" type="button" data-filter="investment">투자</button>
             </div>

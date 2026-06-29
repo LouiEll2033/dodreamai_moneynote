@@ -1,6 +1,6 @@
 const STORAGE_KEY = "dodreamMoneyNote.records.v1";
 const CALENDAR_STORAGE_KEY = "dodreamMoneyNote.calendarIncome.v1";
-const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260629.redGrouped";
+const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260629.liveRed";
 const RED_CALENDAR_COLOR_ID = "11";
 
 const categories = {
@@ -68,9 +68,13 @@ const calendarSeedEvents = [
     "2026-12-04", "2026-12-07", "2026-12-11", "2026-12-14", "2026-12-18",
     "2026-12-21", "2026-12-25", "2026-12-28",
   ], "13:00", "15:30"),
-  ...makeSeedEvents("월봉초방과후", "월봉초등학교", [
+  ...makeSeedEvents("월봉초코딩", "월봉초등학교", [
     "2026-06-10", "2026-06-17", "2026-06-24", "2026-07-01", "2026-07-08",
-    "2026-07-15", "2026-07-22", "2026-09-16", "2026-09-23", "2026-09-30",
+    "2026-07-15", "2026-07-22", "2026-08-26", "2026-09-02", "2026-09-09",
+    "2026-09-16", "2026-09-23", "2026-09-30", "2026-10-07", "2026-10-14",
+    "2026-10-21", "2026-10-28", "2026-11-04", "2026-11-11", "2026-11-18",
+    "2026-11-25", "2026-12-02", "2026-12-09", "2026-12-16", "2026-12-23",
+    "2026-12-30",
   ], "14:00", "15:20"),
   ...makeSeedEvents("ChatGPT 활용 글짓기", "두정평생학습관", [
     "2026-06-05", "2026-06-12", "2026-06-19", "2026-06-26", "2026-07-03",
@@ -83,12 +87,24 @@ const calendarSeedEvents = [
     "2026-10-08", "2026-10-15", "2026-10-22", "2026-10-29", "2026-11-05",
     "2026-11-12", "2026-11-19",
   ], "17:30", "19:30"),
+  { title: "태조산진로직업체험 박람회_부스", category: "특강", date: "2026-06-04", startTime: "", endTime: "" },
+  { title: "태조산부스운영", category: "특강", date: "2026-06-04", startTime: "07:30", endTime: "16:00" },
+  { title: "cDT코딩 결과 발표 일", category: "특강", date: "2026-06-05", startTime: "", endTime: "" },
+  { title: "다문화보조", category: "특강", date: "2026-06-09", startTime: "10:00", endTime: "12:00" },
+  { title: "부여교원연수_vids", category: "특강", date: "2026-06-10", startTime: "14:00", endTime: "16:30" },
   { title: "다문화센터_이미지만들기강의", category: "특강", date: "2026-06-16", startTime: "09:30", endTime: "13:00" },
   { title: "다문화센터_블로그 강의", category: "특강", date: "2026-06-18", startTime: "10:00", endTime: "13:00" },
   { title: "석성중학교 18명_알티노", category: "특강", date: "2026-07-07", startTime: "13:30", endTime: "16:00" },
   { title: "부여AI센터교구교육", category: "특강", date: "2026-06-30", startTime: "14:00", endTime: "17:30" },
   { title: "코딩 교육 수업_천안시청소년복합커뮤니티센터", category: "특강", date: "2026-08-07", startTime: "13:00", endTime: "15:00" },
   { title: "코딩 교육 수업_천안시청소년복합커뮤니티센터", category: "특강", date: "2026-08-08", startTime: "13:00", endTime: "15:00" },
+  { title: "복합커뮤니티센터", category: "특강", date: "2026-08-11", startTime: "10:00", endTime: "11:30" },
+  { title: "복합커뮤니티센터", category: "특강", date: "2026-08-13", startTime: "10:00", endTime: "11:30" },
+  { title: "여성인력_생성형AI", category: "여성인력개발센터", date: "2026-08-13", startTime: "14:00", endTime: "16:00" },
+  { title: "복합커뮤니티센터_돌봄", category: "특강", date: "2026-08-14", startTime: "10:00", endTime: "11:50" },
+  ...makeSeedEvents("백석대앵커사업단_천안시통합돌봄센터", "특강", [
+    "2026-08-24", "2026-08-31", "2026-09-07", "2026-09-14",
+  ], "19:00", "21:00"),
 ].map((event) => ({ ...event, colorId: RED_CALENDAR_COLOR_ID }));
 
 const redCalendarIdentities = new Set(
@@ -98,7 +114,7 @@ const redCalendarIdentities = new Set(
 const state = {
   records: loadRecords(),
   calendarItems: loadCalendarItems(),
-  type: "income",
+  type: "expense",
   month: toMonth(new Date()),
   filter: "all",
 };
@@ -133,27 +149,17 @@ const els = {
   templateRow: document.getElementById("templateRow"),
   recordForm: document.getElementById("recordForm"),
   recordId: document.getElementById("recordId"),
-  lectureDate: document.getElementById("lectureDate"),
-  paymentDate: document.getElementById("paymentDate"),
-  paymentDateLabel: document.getElementById("paymentDateLabel"),
   recordDate: document.getElementById("recordDate"),
   standardDateRow: document.querySelector(".standard-date-row"),
   amount: document.getElementById("amount"),
   category: document.getElementById("category"),
   title: document.getElementById("title"),
   titleLabel: document.getElementById("titleLabel"),
-  incomeStatus: document.getElementById("incomeStatus"),
-  sessionCount: document.getElementById("sessionCount"),
   scope: document.getElementById("scope"),
   memo: document.getElementById("memo"),
-  incomeFields: document.querySelectorAll(".income-fields"),
   saveRecordBtn: document.getElementById("saveRecordBtn"),
   resetFormBtn: document.getElementById("resetFormBtn"),
   cancelEditBtn: document.getElementById("cancelEditBtn"),
-  pendingList: document.getElementById("pendingList"),
-  pendingCount: document.getElementById("pendingCount"),
-  lessonIncomeList: document.getElementById("lessonIncomeList"),
-  lessonIncomeCount: document.getElementById("lessonIncomeCount"),
   incomeBars: document.getElementById("incomeBars"),
   outgoingBars: document.getElementById("outgoingBars"),
   recordsList: document.getElementById("recordsList"),
@@ -215,7 +221,6 @@ function bindEvents() {
     });
   });
 
-  els.incomeStatus.addEventListener("change", updateIncomeStatusLabel);
   els.recordForm.addEventListener("submit", saveRecord);
   els.resetFormBtn.addEventListener("click", () => clearForm(true));
   els.cancelEditBtn.addEventListener("click", () => clearForm(true));
@@ -227,10 +232,8 @@ function bindEvents() {
 
 function setDefaults() {
   const today = toDateInput(new Date());
-  els.lectureDate.value = today;
-  els.paymentDate.value = today;
   els.recordDate.value = today;
-  els.sessionCount.value = "1";
+  els.calendarAddCount.value = "1";
 }
 
 function updateTypeUI() {
@@ -238,20 +241,13 @@ function updateTypeUI() {
     button.classList.toggle("active", button.dataset.type === state.type);
   });
 
-  const isIncome = state.type === "income";
-  els.incomeFields.forEach((field) => {
-    field.hidden = !isIncome;
-  });
-  els.standardDateRow.hidden = isIncome;
-  els.scope.closest("label").hidden = isIncome;
-  els.titleLabel.textContent = isIncome ? "기관/강의명" : "사용 내용";
-  els.title.placeholder = isIncome
-    ? "예: 여성인력개발센터 ChatGPT 특강"
-    : "예: 강의 이동 교통비";
+  els.standardDateRow.hidden = false;
+  els.scope.closest("label").hidden = false;
+  els.titleLabel.textContent = "사용 내용";
+  els.title.placeholder = "예: 강의 이동 교통비";
 
   renderCategoryOptions();
   renderTemplates();
-  updateIncomeStatusLabel();
 }
 
 function renderCategoryOptions() {
@@ -273,14 +269,8 @@ function renderTemplates() {
       els.category.value = template.category;
       els.title.value = template.title;
       if (template.scope) els.scope.value = template.scope;
-      if (state.type === "income" && !els.amount.value) els.sessionCount.value = "1";
     });
   });
-}
-
-function updateIncomeStatusLabel() {
-  const isPending = els.incomeStatus.value === "pending";
-  els.paymentDateLabel.textContent = isPending ? "예상 입금일" : "입금일";
 }
 
 function saveRecord(event) {
@@ -294,7 +284,7 @@ function saveRecord(event) {
 
   const title = els.title.value.trim();
   if (!title) {
-    showToast("기관명이나 사용 내용을 입력해 주세요.");
+    showToast("사용 내용을 입력해 주세요.");
     els.title.focus();
     return;
   }
@@ -302,45 +292,24 @@ function saveRecord(event) {
   const now = new Date().toISOString();
   const id = els.recordId.value || makeId();
   const previous = state.records.find((record) => record.id === id);
-  let record;
 
-  if (state.type === "income") {
-    if (!els.lectureDate.value || !els.paymentDate.value) {
-      showToast("강의일과 입금일을 확인해 주세요.");
-      return;
-    }
-    record = {
-      id,
-      type: "income",
-      title,
-      category: els.category.value,
-      amount,
-      lectureDate: els.lectureDate.value,
-      paymentDate: els.paymentDate.value,
-      status: els.incomeStatus.value,
-      sessionCount: Number(els.sessionCount.value) || 1,
-      memo: els.memo.value.trim(),
-      createdAt: previous?.createdAt || now,
-      updatedAt: now,
-    };
-  } else {
-    if (!els.recordDate.value) {
-      showToast("사용일을 입력해 주세요.");
-      return;
-    }
-    record = {
-      id,
-      type: state.type,
-      title,
-      category: els.category.value,
-      amount,
-      date: els.recordDate.value,
-      scope: els.scope.value,
-      memo: els.memo.value.trim(),
-      createdAt: previous?.createdAt || now,
-      updatedAt: now,
-    };
+  if (!els.recordDate.value) {
+    showToast("사용일을 입력해 주세요.");
+    return;
   }
+
+  const record = {
+    id,
+    type: state.type,
+    title,
+    category: els.category.value,
+    amount,
+    date: els.recordDate.value,
+    scope: els.scope.value,
+    memo: els.memo.value.trim(),
+    createdAt: previous?.createdAt || now,
+    updatedAt: now,
+  };
 
   state.records = previous
     ? state.records.map((item) => (item.id === id ? record : item))
@@ -356,11 +325,10 @@ function clearForm(resetType) {
   els.amount.value = "";
   els.title.value = "";
   els.memo.value = "";
-  els.incomeStatus.value = "received";
   els.scope.value = "business";
   els.saveRecordBtn.textContent = "저장";
   els.cancelEditBtn.hidden = true;
-  if (resetType) state.type = "income";
+  if (resetType) state.type = "expense";
   setDefaults();
   updateTypeUI();
 }
@@ -370,8 +338,6 @@ function renderAll() {
   els.monthTitle.textContent = formatMonthTitle(state.month);
   renderSummary();
   renderCalendarIncome();
-  renderPending();
-  renderLessonIncome();
   renderInsights();
   renderRecords();
 }
@@ -381,12 +347,8 @@ function renderSummary() {
   const calendarItems = calendarItemsForMonth(state.month);
   const calendarPaid = sum(calendarItems.filter((item) => item.paid));
   const calendarUnpaid = sum(calendarItems.filter((item) => !item.paid));
-  const receivedIncome =
-    sum(monthRecords.filter((record) => record.type === "income" && record.status === "received")) +
-    calendarPaid;
-  const pendingIncome =
-    sum(monthRecords.filter((record) => record.type === "income" && record.status === "pending")) +
-    calendarUnpaid;
+  const receivedIncome = calendarPaid;
+  const pendingIncome = calendarUnpaid;
   const businessExpense = sum(
     monthRecords.filter((record) => record.type === "expense" && record.scope === "business")
   );
@@ -539,7 +501,7 @@ function mergeSeedEvents() {
 
 function renderCalendarCategoryOptions() {
   els.calendarAddCategory.innerHTML = categories.income
-    .filter((category) => category !== "콘텐츠 수익")
+    .filter((category) => category !== "콘텐츠 수익" && category !== "기타 수입")
     .map((category) => `<option value="${escapeAttr(category)}">${escapeHtml(category)}</option>`)
     .join("");
   els.calendarAddCategory.value = "특강";
@@ -605,45 +567,10 @@ function clearCalendarMonth() {
   showToast("이번 달 캘린더 일정을 비웠습니다.");
 }
 
-function renderPending() {
-  const pending = state.records
-    .filter((record) => record.type === "income" && record.status === "pending")
-    .sort((a, b) => a.paymentDate.localeCompare(b.paymentDate));
-
-  els.pendingCount.textContent = `${pending.length}건`;
-  if (!pending.length) {
-    els.pendingList.innerHTML = `<div class="empty-state">입금 예정 기록이 없습니다.</div>`;
-    return;
-  }
-
-  els.pendingList.innerHTML = pending.map(renderMoneyItem).join("");
-  bindRecordActions(els.pendingList);
-}
-
-function renderLessonIncome() {
-  const lectureRecords = state.records
-    .filter((record) => record.type === "income" && toMonth(record.lectureDate) === state.month)
-    .sort((a, b) => b.lectureDate.localeCompare(a.lectureDate));
-  const total = sum(lectureRecords);
-
-  els.lessonIncomeCount.textContent = `${lectureRecords.length}건 · ${formatWon(total)}`;
-  if (!lectureRecords.length) {
-    els.lessonIncomeList.innerHTML = `<div class="empty-state">선택한 월의 직접 입력 수입이 없습니다.</div>`;
-    return;
-  }
-
-  els.lessonIncomeList.innerHTML = lectureRecords.map(renderMoneyItem).join("");
-  bindRecordActions(els.lessonIncomeList);
-}
-
 function renderInsights() {
   const monthRecords = recordsForCashMonth(state.month);
   const calendarGroups = groupCalendarAmounts(calendarItemsForMonth(state.month));
-  const manualIncomeGroups = groupAmounts(
-    monthRecords.filter((record) => record.type === "income"),
-    "category"
-  );
-  const incomeGroups = mergeGroups(manualIncomeGroups, calendarGroups);
+  const incomeGroups = mergeGroups(calendarGroups);
   const outgoingGroups = groupAmounts(
     monthRecords.filter((record) => record.type === "expense" || record.type === "investment"),
     "category"
@@ -655,6 +582,7 @@ function renderInsights() {
 
 function renderRecords() {
   const records = recordsForCashMonth(state.month)
+    .filter((record) => record.type === "expense" || record.type === "investment")
     .filter((record) => state.filter === "all" || record.type === state.filter)
     .sort((a, b) => getCashDate(b).localeCompare(getCashDate(a)));
 
@@ -670,10 +598,7 @@ function renderRecords() {
 function renderMoneyItem(record) {
   const typeClass = record.type === "expense" ? "type-expense" : record.type === "investment" ? "type-investment" : "";
   const status = getStatusChip(record);
-  const dateText = record.type === "income"
-    ? `강의 ${formatShortDate(record.lectureDate)} · 입금 ${formatShortDate(record.paymentDate)}`
-    : `${formatShortDate(record.date)} · ${record.scope === "personal" ? "개인" : "사업"}`;
-  const sessions = record.type === "income" ? ` · ${record.sessionCount || 1}차시` : "";
+  const dateText = `${formatShortDate(record.date)} · ${record.scope === "personal" ? "개인" : "사업"}`;
   const memo = record.memo ? ` · ${escapeHtml(record.memo)}` : "";
 
   return `
@@ -683,7 +608,7 @@ function renderMoneyItem(record) {
           <span class="type-dot ${typeClass}" aria-hidden="true"></span>
           <span class="item-title">${escapeHtml(record.title)}</span>
         </div>
-        <div class="item-meta">${escapeHtml(record.category)} · ${dateText}${sessions}${memo}</div>
+        <div class="item-meta">${escapeHtml(record.category)} · ${dateText}${memo}</div>
       </div>
       <div class="item-amount">
         <span>${formatWon(record.amount)}</span>
@@ -702,11 +627,6 @@ function renderMoneyItem(record) {
 }
 
 function getStatusChip(record) {
-  if (record.type === "income") {
-    const className = record.status === "pending" ? "status-pending" : "status-received";
-    const label = record.status === "pending" ? "예정" : "완료";
-    return `<span class="status-chip ${className}">${label}</span>`;
-  }
   const className = record.scope === "personal" ? "status-personal" : "status-business";
   const label = record.scope === "personal" ? "개인" : "사업";
   return `<span class="status-chip ${className}">${label}</span>`;
@@ -728,6 +648,7 @@ function bindRecordActions(root) {
 }
 
 function editRecord(record) {
+  if (record.type !== "expense" && record.type !== "investment") return;
   state.type = record.type;
   updateTypeUI();
   els.recordId.value = record.id;
@@ -736,19 +657,11 @@ function editRecord(record) {
   els.title.value = record.title;
   els.memo.value = record.memo || "";
 
-  if (record.type === "income") {
-    els.lectureDate.value = record.lectureDate;
-    els.paymentDate.value = record.paymentDate;
-    els.incomeStatus.value = record.status;
-    els.sessionCount.value = String(record.sessionCount || 1);
-  } else {
-    els.recordDate.value = record.date;
-    els.scope.value = record.scope || "business";
-  }
+  els.recordDate.value = record.date;
+  els.scope.value = record.scope || "business";
 
   els.saveRecordBtn.textContent = "수정 저장";
   els.cancelEditBtn.hidden = false;
-  updateIncomeStatusLabel();
   document.querySelector(".entry-panel").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -860,14 +773,14 @@ function exportCsv() {
     ]),
     ...records.map((record) => [
       typeLabel(record.type),
-      record.type === "income" ? statusLabel(record.status) : "",
-      record.type === "income" ? record.lectureDate : record.date,
-      record.type === "income" ? record.paymentDate : "",
+      "",
+      record.date,
+      "",
       record.title,
       record.category,
-      record.scope === "personal" ? "개인" : record.type === "income" ? "" : "사업",
+      record.scope === "personal" ? "개인" : "사업",
       record.amount,
-      record.type === "income" ? record.sessionCount || 1 : "",
+      "",
       record.memo || "",
     ]),
   ];
@@ -896,13 +809,14 @@ function groupCalendarEvents(events) {
   events
     .filter(isRedCalendarItem)
     .forEach((event) => {
-      const category = event.category || guessCalendarCategory(event.title);
+      const title = calendarCanonicalTitle(event.title);
+      const category = event.category || guessCalendarCategory(title);
       const month = toMonth(event.date);
-      const id = calendarGroupId(event.title, category, month);
+      const id = calendarGroupId(title, category, month);
       if (!groups.has(id)) {
         groups.set(id, {
           id,
-          title: event.title,
+          title,
           category,
           month,
           dates: [],
@@ -923,7 +837,7 @@ function groupCalendarEvents(events) {
 function normalizeCalendarCollection(items) {
   const groups = new Map();
   items.filter(isValidCalendarItem).forEach((item) => {
-    const title = String(item.title || "").trim();
+    const title = calendarCanonicalTitle(item.title);
     const category = item.category || guessCalendarCategory(title);
     const manual = item.source === "manual";
     if (!manual && !isRedCalendarItem({ title, category, colorId: item.colorId })) return;
@@ -997,7 +911,7 @@ function mergeCalendarDates(group, dates) {
 }
 
 function calendarDateKey(entry) {
-  return `${entry.date}|${entry.startTime || ""}|${entry.endTime || ""}`;
+  return entry.date;
 }
 
 function calendarSessionCount(item) {
@@ -1028,7 +942,6 @@ function calendarDateFullSummary(item) {
 }
 
 function getCashDate(record) {
-  if (record.type === "income") return record.paymentDate || record.lectureDate;
   return record.date;
 }
 
@@ -1094,7 +1007,7 @@ function persistCalendarItems() {
 }
 
 function isValidRecord(record) {
-  return record && typeof record.id === "string" && ["income", "expense", "investment"].includes(record.type);
+  return record && typeof record.id === "string" && ["expense", "investment"].includes(record.type);
 }
 
 function isValidCalendarItem(item) {
@@ -1148,7 +1061,6 @@ function toDateInput(date) {
 }
 
 function typeLabel(type) {
-  if (type === "income") return "수입";
   if (type === "expense") return "지출";
   return "투자";
 }
@@ -1188,11 +1100,26 @@ function makeSeedEvents(title, category, dates, startTime, endTime) {
 }
 
 function guessCalendarCategory(title) {
+  if (title.includes("여성인력")) return "여성인력개발센터";
   if (title.includes("성환")) return "성환초등학교";
   if (title.includes("월봉")) return "월봉초등학교";
   if (title.includes("두정") || title.toLowerCase().includes("chat")) return "두정평생학습관";
   if (title.includes("콘텐츠")) return "콘텐츠 수익";
   return "특강";
+}
+
+function calendarCanonicalTitle(title) {
+  const raw = String(title || "").trim();
+  const value = normalizeCalendarText(raw);
+  if (value.includes("성환초방과후")) return "성환초방과후";
+  if (value.includes("월봉초") || value.includes("월봉초방과후")) return "월봉초코딩";
+  if (value.includes("chatgpt") || (value.includes("chat") && value.includes("글짓기"))) return "ChatGPT 활용 글짓기";
+  if (value.includes("아청문") && value.includes("cdt")) return "아청문 CDT";
+  if (value.includes("여성인력") && value.includes("생성형ai")) return "여성인력_생성형AI";
+  if (value.includes("백석대앵커사업단")) return "백석대앵커사업단_천안시통합돌봄센터";
+  if (value.includes("복합커뮤니티센터") && value.includes("돌봄")) return "복합커뮤니티센터_돌봄";
+  if (value.includes("복합커뮤니티센터")) return "복합커뮤니티센터";
+  return raw;
 }
 
 function isRedCalendarItem(item) {
@@ -1212,15 +1139,26 @@ function isKnownRedClassTitle(title) {
   const value = normalizeCalendarText(title);
   return [
     "성환초방과후",
+    "성환초방과후수업",
     "월봉초방과후",
     "월봉초코딩",
     "chatgpt활용글짓기",
+    "chatgptgpt활용글짓기",
     "아청문cdt",
+    "태조산진로직업체험박람회부스",
+    "태조산부스운영",
+    "cdt코딩결과발표일",
+    "다문화보조",
+    "부여교원연수vids",
     "다문화센터이미지만들기강의",
     "다문화센터블로그강의",
     "석성중학교18명알티노",
     "부여ai센터교구교육",
     "코딩교육수업천안시청소년복합커뮤니티센터",
+    "복합커뮤니티센터",
+    "복합커뮤니티센터돌봄",
+    "여성인력생성형ai",
+    "백석대앵커사업단천안시통합돌봄센터",
   ].some((keyword) => value.includes(normalizeCalendarText(keyword)));
 }
 
@@ -1229,7 +1167,7 @@ function calendarGroupId(title, category, month) {
 }
 
 function calendarIdentity(title, category) {
-  return `${normalizeCalendarText(title)}|${normalizeCalendarText(category || "")}`;
+  return `${normalizeCalendarText(calendarCanonicalTitle(title))}|${normalizeCalendarText(category || "")}`;
 }
 
 function normalizeCalendarText(value) {
