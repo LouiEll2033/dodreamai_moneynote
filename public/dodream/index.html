@@ -80,6 +80,38 @@
           </article>
         </section>
 
+        <section class="calendar-panel panel" aria-labelledby="calendarIncomeTitle">
+          <div class="section-heading">
+            <div>
+              <h2 id="calendarIncomeTitle">캘린더 강의 수익</h2>
+              <p class="section-note">강의 일정별 금액과 입금 완료를 관리합니다.</p>
+            </div>
+            <button class="text-button compact" id="importCalendarBtn" type="button">일정 가져오기</button>
+          </div>
+
+          <div class="calendar-summary-grid" aria-label="캘린더 수익 요약">
+            <article class="calendar-metric">
+              <span>월 수익</span>
+              <strong id="calendarMonthTotal">0원</strong>
+            </article>
+            <article class="calendar-metric paid">
+              <span>입금 완료</span>
+              <strong id="calendarPaidTotal">0원</strong>
+            </article>
+            <article class="calendar-metric unpaid">
+              <span>미입금</span>
+              <strong id="calendarUnpaidTotal">0원</strong>
+            </article>
+          </div>
+
+          <div class="calendar-toolbar">
+            <span id="calendarIncomeCount" class="count-pill">0건</span>
+            <button class="text-button compact" id="clearCalendarMonthBtn" type="button">이번 달 비우기</button>
+          </div>
+
+          <div id="calendarIncomeList" class="calendar-list"></div>
+        </section>
+
         <section class="entry-panel" aria-labelledby="entryTitle">
           <div class="section-heading">
             <h2 id="entryTitle">기록하기</h2>
