@@ -1,6 +1,6 @@
 const STORAGE_KEY = "dodreamMoneyNote.records.v1";
 const CALENDAR_STORAGE_KEY = "dodreamMoneyNote.calendarIncome.v1";
-const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260629.liveRedFromMay";
+const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260630.allRedImport";
 const RED_CALENDAR_COLOR_ID = "11";
 
 const categories = {
@@ -970,7 +970,7 @@ function calendarItemsForMonth(month) {
 function groupCalendarEvents(events) {
   const groups = new Map();
   events
-    .filter(isRedCalendarItem)
+    .filter((event) => String(event.colorId || "") === RED_CALENDAR_COLOR_ID || isRedCalendarItem(event))
     .forEach((event) => {
       const title = calendarCanonicalTitle(event.title);
       const category = event.category || guessCalendarCategory(title);
@@ -1003,7 +1003,11 @@ function normalizeCalendarCollection(items) {
     const title = calendarCanonicalTitle(item.title);
     const category = item.category || guessCalendarCategory(title);
     const manual = item.source === "manual";
-    if (!manual && !isRedCalendarItem({ title, category, colorId: item.colorId })) return;
+    if (
+      !manual &&
+      String(item.colorId || "") !== RED_CALENDAR_COLOR_ID &&
+      !isRedCalendarItem({ title, category, colorId: item.colorId })
+    ) return;
 
     const dates = normalizeCalendarDates(item);
     const monthSource = dates[0]?.date || item.date || "";
@@ -1287,6 +1291,10 @@ function calendarCanonicalTitle(title) {
   if (value.includes("백석대앵커사업단")) return "백석대앵커사업단_천안시통합돌봄센터";
   if (value.includes("복합커뮤니티센터") && value.includes("돌봄")) return "복합커뮤니티센터_돌봄";
   if (value.includes("복합커뮤니티센터")) return "복합커뮤니티센터";
+  if (raw.includes("출석부_월봉초방과후")) return "월봉초코딩";
+  if (raw.includes("아청문CDT(종강)")) return "아청문CDT";
+  if (raw.includes("여성인력_콘텐츠만들기반")) return "여성인력_콘텐츠만들기반";
+  if (raw.includes("청복커체험부스")) return "청복커체험부스";
   return raw;
 }
 
