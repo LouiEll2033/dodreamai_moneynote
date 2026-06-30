@@ -130,12 +130,15 @@ const state = {
   type: "expense",
   month: toMonth(new Date()),
   filter: "all",
+  summaryFocus: "",
 };
 
 const els = {
   todayLabel: document.getElementById("todayLabel"),
   monthTitle: document.getElementById("monthTitle"),
   monthInput: document.getElementById("monthInput"),
+  summaryCards: document.querySelectorAll("[data-summary]"),
+  summaryDetails: document.getElementById("summaryDetails"),
   prevMonthBtn: document.getElementById("prevMonthBtn"),
   nextMonthBtn: document.getElementById("nextMonthBtn"),
   receivedIncome: document.getElementById("receivedIncome"),
@@ -205,6 +208,9 @@ function bindEvents() {
   els.monthInput.addEventListener("change", () => {
     state.month = els.monthInput.value || toMonth(new Date());
     renderAll();
+  });
+  els.summaryCards.forEach((button) => {
+    button.addEventListener("click", () => toggleSummaryDetail(button.dataset.summary || ""));
   });
   els.importCalendarBtn.addEventListener("click", () => {
     const added = mergeSeedEvents();
@@ -350,6 +356,7 @@ function renderAll() {
   els.monthInput.value = state.month;
   els.monthTitle.textContent = formatMonthTitle(state.month);
   renderSummary();
+  renderSummaryDetails();
   renderCalendarIncome();
   renderInsights();
   renderRecords();
@@ -360,7 +367,8 @@ function renderSummary() {
   const calendarItems = calendarItemsForMonth(state.month);
   const calendarPaid = sum(calendarItems.filter((item) => item.paid));
   const calendarUnpaid = sum(calendarItems.filter((item) => !item.paid));
-  const receivedIncome = calendarPaid;
+  const directIncome = sum(monthRecords.filter((record) => record.type === "income"));
+  const receivedIncome = calendarPaid + directIncome;
   const pendingIncome = calendarUnpaid;
   const businessExpense = sum(
     monthRecords.filter((record) => record.type === "expense" && record.scope === "business")
@@ -377,6 +385,144 @@ function renderSummary() {
   els.personalExpense.textContent = formatWon(personalExpense);
   els.investmentTotal.textContent = formatWon(investmentTotal);
   els.cashLeft.textContent = formatWon(cashLeft);
+}
+
+function toggleSummaryDetail(key) {
+  state.summaryFocus = state.summaryFocus === key ? "" : key;
+  renderSummaryDetails();
+}
+
+function renderSummaryDetails() {
+  updateSummaryCardState();
+  if (!state.summaryFocus) {
+    els.summaryDetails.hidden = true;
+    els.summaryDetails.innerHTML = "";
+    return;
+  }
+
+  const detail = buildSummaryDetail(state.summaryFocus);
+  const body = detail.items.length
+    ? `<div class="summary-detail-list">${detail.items.map(renderSummaryDetailItem).join("")}</div>`
+    : `<div class="empty-state">선택한 항목의 관련 내역이 없습니다.</div>`;
+
+  els.summaryDetails.hidden = false;
+  els.summaryDetails.innerHTML = `
+    <div class="section-heading">
+      <div>
+        <h2>${escapeHtml(detail.title)}</h2>
+        <p class="section-note">${escapeHtml(detail.note)}</p>
+      </div>
+      <strong class="summary-detail-total">${formatWon(detail.total)}</strong>
+    </div>
+    ${body}
+  `;
+}
+
+function updateSummaryCardState() {
+  els.summaryCards.forEach((button) => {
+    const active = button.dataset.summary === state.summaryFocus;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-expanded", String(active));
+  });
+}
+
+function buildSummaryDetail(key) {
+  const monthRecords = recordsForCashMonth(state.month);
+  const calendarItems = calendarItemsForMonth(state.month);
+  const paidItems = calendarItems.filter((item) => item.paid);
+  const unpaidItems = calendarItems.filter((item) => !item.paid);
+  const incomeRecords = monthRecords.filter((record) => record.type === "income");
+  const businessRecords = monthRecords.filter((record) => record.type === "expense" && record.scope === "business");
+  const personalRecords = monthRecords.filter((record) => record.type === "expense" && record.scope === "personal");
+  const investmentRecords = monthRecords.filter((record) => record.type === "investment");
+
+  if (key === "received") {
+    return {
+      title: "입금 내역",
+      note: `${formatMonthTitle(state.month)} 기준 입금 완료 금액입니다.`,
+      total: sum(paidItems) + sum(incomeRecords),
+      items: [...paidItems.map(calendarSummaryDetailItem), ...incomeRecords.map(recordSummaryDetailItem)],
+    };
+  }
+
+  if (key === "pending") {
+    return {
+      title: "입금 예정 내역",
+      note: `${formatMonthTitle(state.month)} 기준 미입금 강의입니다.`,
+      total: sum(unpaidItems),
+      items: unpaidItems.map(calendarSummaryDetailItem),
+    };
+  }
+
+  if (key === "business") {
+    return {
+      title: "사업 지출 내역",
+      note: `${formatMonthTitle(state.month)} 기준 사업 관련 지출입니다.`,
+      total: sum(businessRecords),
+      items: businessRecords.map(recordSummaryDetailItem),
+    };
+  }
+
+  if (key === "personal") {
+    return {
+      title: "개인 지출 내역",
+      note: `${formatMonthTitle(state.month)} 기준 개인 지출입니다.`,
+      total: sum(personalRecords),
+      items: personalRecords.map(recordSummaryDetailItem),
+    };
+  }
+
+  if (key === "investment") {
+    return {
+      title: "투자 내역",
+      note: `${formatMonthTitle(state.month)} 기준 자기계발과 사업 투자입니다.`,
+      total: sum(investmentRecords),
+      items: investmentRecords.map(recordSummaryDetailItem),
+    };
+  }
+
+  return {
+    title: "잔액 계산 내역",
+    note: `${formatMonthTitle(state.month)} 기준 잔액에 반영된 항목입니다.`,
+    total: sum(paidItems) + sum(incomeRecords) - sum(businessRecords) - sum(personalRecords) - sum(investmentRecords),
+    items: [
+      { title: "입금 완료", meta: `${paidItems.length + incomeRecords.length}건`, amount: sum(paidItems) + sum(incomeRecords), tone: "income" },
+      { title: "사업 지출", meta: `${businessRecords.length}건`, amount: -sum(businessRecords), tone: "outgoing" },
+      { title: "개인 지출", meta: `${personalRecords.length}건`, amount: -sum(personalRecords), tone: "outgoing" },
+      { title: "투자", meta: `${investmentRecords.length}건`, amount: -sum(investmentRecords), tone: "outgoing" },
+    ],
+  };
+}
+
+function renderSummaryDetailItem(item) {
+  const toneClass = item.tone ? ` ${item.tone}` : "";
+  return `
+    <article class="summary-detail-item${toneClass}">
+      <div class="summary-detail-text">
+        <strong>${escapeHtml(item.title)}</strong>
+        <span>${escapeHtml(item.meta || "")}</span>
+      </div>
+      <strong class="summary-detail-amount">${formatWon(item.amount)}</strong>
+    </article>
+  `;
+}
+
+function calendarSummaryDetailItem(item) {
+  return {
+    title: item.title,
+    meta: `${item.category} · ${calendarDateSummary(item)} · ${calendarSessionCount(item)}회`,
+    amount: Number(item.amount || 0),
+    tone: item.paid ? "income" : "pending",
+  };
+}
+
+function recordSummaryDetailItem(record) {
+  return {
+    title: record.title,
+    meta: `${record.category} · ${formatShortDate(record.date)}`,
+    amount: Number(record.amount || 0),
+    tone: record.type === "income" ? "income" : "outgoing",
+  };
 }
 
 function renderCalendarIncome() {
@@ -583,7 +729,11 @@ function clearCalendarMonth() {
 function renderInsights() {
   const monthRecords = recordsForCashMonth(state.month);
   const calendarGroups = groupCalendarAmounts(calendarItemsForMonth(state.month));
-  const incomeGroups = mergeGroups(calendarGroups);
+  const manualIncomeGroups = groupAmounts(
+    monthRecords.filter((record) => record.type === "income"),
+    "category"
+  );
+  const incomeGroups = mergeGroups(calendarGroups, manualIncomeGroups);
   const outgoingGroups = groupAmounts(
     monthRecords.filter((record) => record.type === "expense" || record.type === "investment"),
     "category"
@@ -609,7 +759,7 @@ function renderRecords() {
 }
 
 function renderMoneyItem(record) {
-  const typeClass = record.type === "expense" ? "type-expense" : record.type === "investment" ? "type-investment" : "";
+  const typeClass = record.type === "expense" ? "type-expense" : record.type === "investment" ? "type-investment" : "type-income";
   const status = getStatusChip(record);
   const dateText = `${formatShortDate(record.date)} · ${record.scope === "personal" ? "개인" : "사업"}`;
   const memo = record.memo ? ` · ${escapeHtml(record.memo)}` : "";
@@ -1020,7 +1170,7 @@ function persistCalendarItems() {
 }
 
 function isValidRecord(record) {
-  return record && typeof record.id === "string" && ["expense", "investment"].includes(record.type);
+  return record && typeof record.id === "string" && ["income", "expense", "investment"].includes(record.type);
 }
 
 function isValidCalendarItem(item) {
@@ -1074,6 +1224,7 @@ function toDateInput(date) {
 }
 
 function typeLabel(type) {
+  if (type === "income") return "?섏엯";
   if (type === "expense") return "지출";
   return "투자";
 }

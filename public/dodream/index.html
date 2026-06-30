@@ -54,31 +54,32 @@
         </section>
 
         <section class="summary-grid" aria-label="월별 현황">
-          <article class="metric-card metric-income">
+          <button class="metric-card metric-income" type="button" data-summary="received" aria-expanded="false">
             <span>입금</span>
             <strong id="receivedIncome">0원</strong>
-          </article>
-          <article class="metric-card metric-pending">
+          </button>
+          <button class="metric-card metric-pending" type="button" data-summary="pending" aria-expanded="false">
             <span>예정</span>
             <strong id="pendingIncome">0원</strong>
-          </article>
-          <article class="metric-card metric-business">
+          </button>
+          <button class="metric-card metric-business" type="button" data-summary="business" aria-expanded="false">
             <span>사업</span>
             <strong id="businessExpense">0원</strong>
-          </article>
-          <article class="metric-card metric-personal">
+          </button>
+          <button class="metric-card metric-personal" type="button" data-summary="personal" aria-expanded="false">
             <span>개인</span>
             <strong id="personalExpense">0원</strong>
-          </article>
-          <article class="metric-card metric-invest">
+          </button>
+          <button class="metric-card metric-invest" type="button" data-summary="investment" aria-expanded="false">
             <span>투자</span>
             <strong id="investmentTotal">0원</strong>
-          </article>
-          <article class="metric-card metric-net">
+          </button>
+          <button class="metric-card metric-net" type="button" data-summary="net" aria-expanded="false">
             <span>잔액</span>
             <strong id="cashLeft">0원</strong>
-          </article>
+          </button>
         </section>
+        <section id="summaryDetails" class="summary-details panel" hidden aria-live="polite"></section>
 
         <section class="calendar-panel panel" aria-labelledby="calendarIncomeTitle">
           <div class="section-heading">

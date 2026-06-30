@@ -182,9 +182,22 @@ main {
 }
 
 .metric-card {
+  width: 100%;
   min-height: 58px;
   padding: 8px;
+  appearance: none;
+  text-align: left;
   border-left: 3px solid var(--teal);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-1px);
+}
+
+.metric-card.active {
+  border-color: var(--teal-dark);
+  box-shadow: 0 12px 24px rgba(8, 123, 115, 0.12);
 }
 
 .metric-card span {
@@ -223,6 +236,72 @@ main {
 
 .metric-net {
   border-left-color: #243b37;
+}
+
+.summary-details {
+  padding: 12px 14px;
+}
+
+.summary-detail-total {
+  color: var(--teal-dark);
+  font-size: 0.96rem;
+}
+
+.summary-detail-list {
+  display: grid;
+  gap: 8px;
+}
+
+.summary-detail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  padding: 10px;
+}
+
+.summary-detail-item.income {
+  border-left: 3px solid var(--teal);
+}
+
+.summary-detail-item.pending {
+  border-left: 3px solid var(--gold);
+}
+
+.summary-detail-item.outgoing {
+  border-left: 3px solid var(--coral);
+}
+
+.summary-detail-text {
+  min-width: 0;
+}
+
+.summary-detail-text strong,
+.summary-detail-text span {
+  display: block;
+}
+
+.summary-detail-text strong {
+  font-size: 0.88rem;
+}
+
+.summary-detail-text span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.summary-detail-amount {
+  flex: 0 0 auto;
+  font-size: 0.88rem;
+}
+
+.type-dot.type-income {
+  background: var(--teal);
 }
 
 .entry-panel,
