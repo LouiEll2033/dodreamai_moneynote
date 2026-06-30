@@ -625,13 +625,27 @@ function findCalendarItem(element) {
 
 function autoImportSeedEvents() {
   if (localStorage.getItem(CALENDAR_SEED_VERSION_KEY)) return;
-  const added = mergeSeedEvents();
+  const added = mergeSeedEvents(true);
   if (added) persistCalendarItems();
   localStorage.setItem(CALENDAR_SEED_VERSION_KEY, "imported");
 }
 
-function mergeSeedEvents() {
+function mergeSeedEvents(replaceImported = false) {
   state.calendarItems = normalizeCalendarCollection(state.calendarItems);
+  const preservedImported = new Map();
+  state.calendarItems.forEach((item) => {
+    if (item.source !== "manual") {
+      preservedImported.set(calendarPreserveKey(item), {
+        amount: Number(item.amount || 0),
+        paid: Boolean(item.paid),
+      });
+    }
+  });
+
+  if (replaceImported) {
+    state.calendarItems = state.calendarItems.filter((item) => item.source === "manual");
+  }
+
   const existingById = new Map(state.calendarItems.map((item) => [item.id, item]));
   const now = new Date().toISOString();
   let added = 0;
@@ -644,10 +658,11 @@ function mergeSeedEvents() {
       existing.source = existing.source || "google-calendar-red";
       existing.colorId = RED_CALENDAR_COLOR_ID;
     } else {
+      const preserved = preservedImported.get(calendarPreserveKey(group));
       state.calendarItems.push({
         ...group,
-        amount: 0,
-        paid: false,
+        amount: preserved?.amount || 0,
+        paid: preserved?.paid || false,
         source: "google-calendar-red",
         colorId: RED_CALENDAR_COLOR_ID,
         importedAt: now,
@@ -658,6 +673,10 @@ function mergeSeedEvents() {
 
   state.calendarItems = normalizeCalendarCollection(state.calendarItems);
   return added;
+}
+
+function calendarPreserveKey(item) {
+  return `${item.month || ""}|${calendarIdentity(item.title, item.category || "")}`;
 }
 
 function renderCalendarCategoryOptions() {
