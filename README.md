@@ -1,97 +1,191 @@
-# vinext-starter
+# 두드림 머니노트
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+두드림AI 강의/사업 운영에 맞춘 개인용 수입, 지출, 투자 관리 웹앱입니다.  
+모바일에서 한 화면으로 보기 쉽게 구성했고, 강의 일정 기반 수입 관리와 월별 분석에 집중해서 만들었습니다.
 
-## Prerequisites
+배포 주소: [두드림 머니노트](https://dodream-money-note.ideacube-cod-4686.chatgpt-team.site/dodream/)
 
-- Node.js `>=22.13.0`
+## 프로젝트 목적
 
-## Quick Start
+이 앱은 아래 문제를 해결하기 위해 만들었습니다.
+
+- 강의별 수입 정리
+- 월별 수입/지출/투자 흐름 확인
+- 입금 완료 여부 체크
+- 강의 일정과 실제 수익 관리 연결
+- 휴대폰과 컴퓨터에서 같은 데이터 보기
+
+## 현재 구현된 기능
+
+### 1. 기본 가계 관리
+
+- 지출 기록
+- 투자 기록
+- 사업/개인 구분
+- 월별 합계 카드
+- 월별 분석 그래프
+- 월별 분석 합계 표시
+
+### 2. 강의 수익 관리
+
+- 빨간색 강의 일정 기준 수익 그룹 관리
+- 일정별 월 수익 입력
+- 입금 완료 체크
+- 직접 추가/삭제
+- 동일 강의명 그룹화
+
+### 3. 사용자 맞춤 분류
+
+- 여성인력개발센터
+- 두정평생학습관
+- 성환초등학교
+- 월봉초등학교
+- 특강
+
+### 4. 동기화
+
+- 초기에는 브라우저 `localStorage` 기반
+- 이후 D1 공용 저장 방식으로 변경
+- 같은 주소를 열면 컴퓨터와 휴대폰에서 같은 데이터 확인 가능
+
+## 작업 진행 과정
+
+### 1단계: 기본 모바일 가계 앱 구성
+
+처음에는 혼자 쓰는 휴대폰용 앱으로 시작했습니다.
+
+- 수입 / 지출 / 투자 탭 구성
+- 모바일 한 화면 레이아웃 적용
+- 월별 요약 카드 구성
+- 지출/투자 기록 폼 구성
+
+### 2단계: 사용자 업무 구조 반영
+
+강의 업무 흐름에 맞게 분류를 조정했습니다.
+
+- 초등 방과후 항목 제거
+- `성환초등학교`, `월봉초등학교`로 분리
+- 사업성 지출과 자기계발/투자 구분 반영
+
+### 3단계: 강의 일정 기반 수익 관리 추가
+
+강의 일정과 수익 관리를 연결하기 위해 캘린더형 수익 영역을 만들었습니다.
+
+- 빨간색 일정만 강의 일정으로 처리
+- 같은 강의명은 그룹화
+- 수익 입력 칸 추가
+- 입금 완료 체크 기능 추가
+- 잘못 들어간 항목 수동 삭제/추가 기능 추가
+
+### 4단계: 요약 카드와 월별 분석 보강
+
+- 상단 요약 카드 클릭 시 관련 내역 표시
+- 월별 분석에 직접 추가 수익 반영
+- 월별 분석 영역에 합계 표시 추가
+
+### 5단계: 5월 일정 누락 문제 수정
+
+5월 데이터에서 일부 강의가 보이지 않는 문제가 있었습니다.
+
+대표적으로:
+
+- 월봉초방과후
+- 청복커체험부스(1시~4시)
+
+원인은 한글 제목을 그룹 ID로 만들 때 ID가 비어 겹치는 문제였습니다.  
+그래서 한글 정규화와 그룹 ID 생성 로직을 수정해 누락 문제를 해결했습니다.
+
+### 6단계: 금액 입력 정밀도 수정
+
+처음에는 금액 입력이 `1000원` 단위로 제한되어 있었습니다.
+
+- 직접 입력 금액
+- 캘린더 수익 금액
+- 월 수익 입력
+
+이 항목들을 `1원` 단위 입력 가능하도록 수정했습니다.
+
+### 7단계: 기기 간 데이터 공유 구조로 전환
+
+초기 구조는 기기별 브라우저 저장이라:
+
+- 컴퓨터에서 입력한 데이터는 컴퓨터에만 보이고
+- 휴대폰에서 입력한 데이터는 휴대폰에만 보였습니다.
+
+이 문제를 해결하기 위해 공용 저장 구조를 붙였습니다.
+
+- D1 바인딩 추가
+- `dodream_shared_state` 테이블 추가
+- `/api/dodream-sync` API 추가
+- 프런트에서 서버 동기화 로직 추가
+
+이후부터는 같은 주소로 접속하면 기기 간 데이터 공유가 가능해졌습니다.
+
+## 기술 구조
+
+### 프런트
+
+- 정적 앱 진입점: `public/dodream/index.html`
+- 메인 로직: `public/dodream/app.js`
+- 스타일: `public/dodream/styles.css`
+
+### 서버/저장소
+
+- API: `app/api/dodream-sync/route.ts`
+- D1 저장 헬퍼: `db/dodream-store.ts`
+- 스키마: `db/schema.ts`
+- 마이그레이션: `drizzle/`
+
+### 배포
+
+- Sites 배포 사용
+- production URL:
+  - [https://dodream-money-note.ideacube-cod-4686.chatgpt-team.site](https://dodream-money-note.ideacube-cod-4686.chatgpt-team.site)
+
+## 로컬 실행 방법
 
 ```bash
 npm install
 npm run dev
+```
+
+빌드 확인:
+
+```bash
 npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+D1 마이그레이션 생성:
 
-## Included Shape
-
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-OpenAI workspace sites can read the current user's email from
-`oai-authenticated-user-email`.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+npm run db:generate
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+## GitHub 업로드 정리
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+공개 저장소 업로드 시 아래는 제외하도록 정리했습니다.
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
+- `.env*`
+- `*.tar.gz`
+- `.openai/hosting.json`
 
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
+즉, 소스코드는 공개 가능하게 정리했고, 배포 아카이브와 인프라 식별 정보는 Git 추적에서 제외했습니다.
 
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
+## 현재 저장소 상태 요약
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
+이 저장소에는 아래 성격의 작업 결과가 반영되어 있습니다.
 
-## Useful Commands
+- 사용자 맞춤 모바일 돈관리 앱
+- 강의 일정 기반 수익 정리
+- 월별 분석 및 합계
+- 한글 그룹화 오류 수정
+- 기기 간 공용 데이터 동기화
+- GitHub 공개용 정리
 
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm run db:generate`: generate Drizzle migrations after schema changes
+## 다음에 확장할 수 있는 방향
 
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- 구글 캘린더 실시간 API 연동
+- 로그인 기반 개인별 데이터 분리
+- CSV / Excel 내보내기 강화
+- 월별 리포트 자동 생성
+- 강의별 정산 현황 대시보드
