@@ -1381,16 +1381,17 @@ function normalizeCalendarText(value) {
   return String(value || "")
     .normalize("NFKC")
     .replace(/\s+/g, "")
-    .replace(/[^\w가-힣]/g, "")
+    .replace(/[^\p{L}\p{N}_]/gu, "")
     .toLowerCase();
 }
 
 function slugify(value) {
-  return String(value)
-    .normalize("NFKD")
-    .replace(/[^\w가-힣]+/g, "-")
+  const slug = String(value || "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+|-+$/g, "")
-    .toLowerCase();
+  return slug || "item";
 }
 
 function escapeHtml(value) {
