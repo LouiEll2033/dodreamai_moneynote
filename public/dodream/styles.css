@@ -809,6 +809,22 @@ button:focus-visible {
   gap: 8px;
 }
 
+.bar-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(18, 36, 31, 0.12);
+  color: var(--text);
+  font-size: 0.84rem;
+}
+
+.bar-total strong {
+  color: var(--text-strong);
+  font-size: 0.96rem;
+}
+
 .bar-row {
   display: grid;
   gap: 5px;

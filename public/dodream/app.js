@@ -565,7 +565,7 @@ function renderCalendarItem(item) {
       </div>
       <label class="calendar-amount-label">
         <span>월 수익</span>
-        <input type="number" min="0" step="1000" inputmode="numeric" data-calendar-amount value="${Number(item.amount || 0)}" placeholder="0">
+        <input type="number" min="0" step="1" inputmode="numeric" data-calendar-amount value="${Number(item.amount || 0)}" placeholder="0">
       </label>
       <div class="calendar-item-actions">
         <label class="paid-check">
@@ -760,8 +760,8 @@ function renderInsights() {
     "category"
   );
 
-  els.incomeBars.innerHTML = renderBars(incomeGroups, "income");
-  els.outgoingBars.innerHTML = renderBars(outgoingGroups, "outgoing");
+  els.incomeBars.innerHTML = renderBarsWithTotal(incomeGroups, "income");
+  els.outgoingBars.innerHTML = renderBarsWithTotal(outgoingGroups, "outgoing");
 }
 
 function renderRecords() {
@@ -883,6 +883,21 @@ function renderBars(groups, kind) {
       `;
     })
     .join("");
+}
+
+function renderBarsWithTotal(groups, kind) {
+  if (!groups.length) {
+    return renderBars(groups, kind);
+  }
+
+  const total = groups.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  return `
+    ${renderBars(groups, kind)}
+    <div class="bar-total">
+      <span>합계</span>
+      <strong>${formatWon(total)}</strong>
+    </div>
+  `;
 }
 
 function exportJson() {
