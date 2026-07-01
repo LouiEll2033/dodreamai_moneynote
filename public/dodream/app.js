@@ -2,6 +2,7 @@ const STORAGE_KEY = "dodreamMoneyNote.records.v1";
 const CALENDAR_STORAGE_KEY = "dodreamMoneyNote.calendarIncome.v1";
 const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260701.manualFixAndMayRefresh";
 const RED_CALENDAR_COLOR_ID = "11";
+const SHARED_SYNC_URL = "/api/dodream-sync";
 
 const categories = {
   income: [
@@ -135,6 +136,10 @@ const state = {
   summaryFocus: "",
 };
 
+let syncReady = false;
+let syncTimer = 0;
+let syncRequest = Promise.resolve();
+
 const els = {
   todayLabel: document.getElementById("todayLabel"),
   monthTitle: document.getElementById("monthTitle"),
@@ -190,7 +195,7 @@ const els = {
 
 init();
 
-function init() {
+async function init() {
   const today = new Date();
   els.todayLabel.textContent = new Intl.DateTimeFormat("ko-KR", {
     dateStyle: "medium",
@@ -200,6 +205,8 @@ function init() {
   bindEvents();
   renderCalendarCategoryOptions();
   updateTypeUI();
+  await hydrateSharedState();
+  syncReady = true;
   autoImportSeedEvents();
   renderAll();
 }
@@ -1204,10 +1211,70 @@ function loadCalendarItems() {
 
 function persistRecords() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.records));
+  queueSharedStateSave();
 }
 
 function persistCalendarItems() {
   localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(state.calendarItems));
+  queueSharedStateSave();
+}
+
+async function hydrateSharedState() {
+  const localHasData = state.records.length > 0 || state.calendarItems.length > 0;
+
+  try {
+    const response = await fetch(SHARED_SYNC_URL, { cache: "no-store" });
+    if (!response.ok) throw new Error(`sync fetch failed: ${response.status}`);
+    const payload = await response.json();
+    const remoteRecords = Array.isArray(payload?.records) ? payload.records.filter(isValidRecord) : [];
+    const remoteCalendarItems = Array.isArray(payload?.calendarItems)
+      ? normalizeCalendarCollection(payload.calendarItems)
+      : [];
+    const remoteHasData = remoteRecords.length > 0 || remoteCalendarItems.length > 0;
+
+    if (remoteHasData) {
+      state.records = remoteRecords;
+      state.calendarItems = remoteCalendarItems;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.records));
+      localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(state.calendarItems));
+      return;
+    }
+  } catch (error) {
+    console.error("Failed to load shared Dodream data.", error);
+    return;
+  }
+
+  if (localHasData) {
+    await saveSharedState();
+  }
+}
+
+function queueSharedStateSave() {
+  if (!syncReady) return;
+  window.clearTimeout(syncTimer);
+  syncTimer = window.setTimeout(() => {
+    syncRequest = syncRequest
+      .catch(() => undefined)
+      .then(() => saveSharedState());
+  }, 250);
+}
+
+async function saveSharedState() {
+  try {
+    const response = await fetch(SHARED_SYNC_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        records: state.records,
+        calendarItems: state.calendarItems,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`sync save failed: ${response.status}`);
+    }
+  } catch (error) {
+    console.error("Failed to save shared Dodream data.", error);
+  }
 }
 
 function isValidRecord(record) {
