@@ -1,6 +1,6 @@
 const STORAGE_KEY = "dodreamMoneyNote.records.v1";
 const CALENDAR_STORAGE_KEY = "dodreamMoneyNote.calendarIncome.v1";
-const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260630.allRedImport";
+const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260701.manualFixAndMayRefresh";
 const RED_CALENDAR_COLOR_ID = "11";
 
 const categories = {
@@ -215,10 +215,10 @@ function bindEvents() {
     button.addEventListener("click", () => toggleSummaryDetail(button.dataset.summary || ""));
   });
   els.importCalendarBtn.addEventListener("click", () => {
-    const added = mergeSeedEvents();
+    const added = mergeSeedEvents(true);
     persistCalendarItems();
     renderAll();
-    showToast(added ? `${added}개 강의 그룹을 가져왔습니다.` : "새로 가져올 강의 그룹이 없습니다.");
+    showToast(added ? `${added}개 강의 그룹을 다시 불러왔습니다.` : "현재 기준으로 다시 불러왔습니다.");
   });
   els.clearCalendarMonthBtn.addEventListener("click", clearCalendarMonth);
   els.calendarAddForm.addEventListener("submit", addCalendarItem);
@@ -701,7 +701,7 @@ function addCalendarItem(event) {
   const amount = Math.max(0, Number(els.calendarAddAmount.value) || 0);
   const paid = els.calendarAddPaid.checked;
   const item = {
-    id: calendarGroupId(title, category, state.month),
+    id: calendarGroupId(title, category, state.month, "manual"),
     title,
     category,
     month: state.month,
@@ -996,7 +996,7 @@ function groupCalendarEvents(events) {
       const title = calendarCanonicalTitle(event.title);
       const category = event.category || guessCalendarCategory(title);
       const month = toMonth(event.date);
-      const id = calendarGroupId(title, category, month);
+      const id = calendarGroupId(title, category, month, "google-calendar-red");
       if (!groups.has(id)) {
         groups.set(id, {
           id,
@@ -1021,9 +1021,10 @@ function groupCalendarEvents(events) {
 function normalizeCalendarCollection(items) {
   const groups = new Map();
   items.filter(isValidCalendarItem).forEach((item) => {
-    const title = calendarCanonicalTitle(item.title);
-    const category = item.category || guessCalendarCategory(title);
     const manual = item.source === "manual";
+    const source = manual ? "manual" : "google-calendar-red";
+    const title = manual ? String(item.title || "").trim() : calendarCanonicalTitle(item.title);
+    const category = item.category || guessCalendarCategory(title);
     if (
       !manual &&
       String(item.colorId || "") !== RED_CALENDAR_COLOR_ID &&
@@ -1035,7 +1036,7 @@ function normalizeCalendarCollection(items) {
     const month = item.month || (monthSource ? toMonth(monthSource) : "");
     if (!title || !month) return;
 
-    const id = calendarGroupId(title, category, month);
+    const id = calendarGroupId(title, category, month, source);
     const amount = Number(item.amount || 0);
     const count = Math.max(Number(item.count || 0), dates.length || 1);
     if (!groups.has(id)) {
@@ -1048,7 +1049,7 @@ function normalizeCalendarCollection(items) {
         count: 0,
         amount: 0,
         paid: Boolean(item.paid),
-        source: manual ? "manual" : "google-calendar-red",
+        source,
         colorId: manual ? "" : RED_CALENDAR_COLOR_ID,
         importedAt: item.importedAt,
         createdAt: item.createdAt,
@@ -1364,12 +1365,16 @@ function isKnownRedClassTitle(title) {
   ].some((keyword) => value.includes(normalizeCalendarText(keyword)));
 }
 
-function calendarGroupId(title, category, month) {
-  return `calendar-group-${month}-${slugify(calendarIdentity(title, category))}`;
+function calendarGroupId(title, category, month, source = "google-calendar-red") {
+  const prefix = source === "manual" ? "calendar-manual" : "calendar-group";
+  return `${prefix}-${month}-${slugify(calendarIdentity(title, category, source))}`;
 }
 
-function calendarIdentity(title, category) {
-  return `${normalizeCalendarText(calendarCanonicalTitle(title))}|${normalizeCalendarText(category || "")}`;
+function calendarIdentity(title, category, source = "google-calendar-red") {
+  const normalizedTitle = source === "manual"
+    ? normalizeCalendarText(String(title || "").trim())
+    : normalizeCalendarText(calendarCanonicalTitle(title));
+  return `${normalizedTitle}|${normalizeCalendarText(category || "")}`;
 }
 
 function normalizeCalendarText(value) {
