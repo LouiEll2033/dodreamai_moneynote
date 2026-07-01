@@ -207,7 +207,7 @@ async function init() {
   updateTypeUI();
   await hydrateSharedState();
   syncReady = true;
-  autoImportSeedEvents();
+  autoSyncCalendarOnOpen();
   renderAll();
 }
 
@@ -222,9 +222,8 @@ function bindEvents() {
     button.addEventListener("click", () => toggleSummaryDetail(button.dataset.summary || ""));
   });
   els.importCalendarBtn.addEventListener("click", () => {
-    const added = mergeSeedEvents(true);
-    persistCalendarItems();
-    renderAll();
+    const { added, changed } = syncCalendarSeedData();
+    if (changed) renderAll();
     showToast(added ? `${added}개 강의 그룹을 다시 불러왔습니다.` : "현재 기준으로 다시 불러왔습니다.");
   });
   els.clearCalendarMonthBtn.addEventListener("click", clearCalendarMonth);
@@ -630,11 +629,21 @@ function findCalendarItem(element) {
   return state.calendarItems.find((item) => item.id === wrapper.dataset.calendarId);
 }
 
-function autoImportSeedEvents() {
-  if (localStorage.getItem(CALENDAR_SEED_VERSION_KEY)) return;
+function autoSyncCalendarOnOpen() {
+  const { changed } = syncCalendarSeedData();
+  if (changed) {
+    renderAll();
+  }
+}
+
+function syncCalendarSeedData() {
+  const before = JSON.stringify(normalizeCalendarCollection(state.calendarItems));
   const added = mergeSeedEvents(true);
-  if (added) persistCalendarItems();
-  localStorage.setItem(CALENDAR_SEED_VERSION_KEY, "imported");
+  const after = JSON.stringify(normalizeCalendarCollection(state.calendarItems));
+  const changed = before !== after;
+  if (changed) persistCalendarItems();
+  localStorage.setItem(CALENDAR_SEED_VERSION_KEY, new Date().toISOString());
+  return { added, changed };
 }
 
 function mergeSeedEvents(replaceImported = false) {
