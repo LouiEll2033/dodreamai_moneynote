@@ -1,7 +1,8 @@
-const STORAGE_KEY = "dodreamMoneyNote.records.v1";
+﻿const STORAGE_KEY = "dodreamMoneyNote.records.v1";
 const CALENDAR_STORAGE_KEY = "dodreamMoneyNote.calendarIncome.v1";
 const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260701.manualFixAndMayRefresh";
 const RED_CALENDAR_COLOR_ID = "11";
+const IGNORED_CALENDAR_SOURCE = "ignored-google-calendar-red";
 const SHARED_SYNC_URL = "/api/dodream-sync";
 
 const categories = {
@@ -615,12 +616,42 @@ function deleteCalendarItem(event) {
   if (!button) return;
   const item = findCalendarItem(button);
   if (!item) return;
-  const ok = window.confirm(`"${item.title}" 강의 그룹을 삭제할까요?`);
+  const actionLabel = item.source === "manual" ? "삭제" : "제외";
+  const ok = window.confirm(`"${item.title}" 항목을 ${actionLabel}할까요?`);
   if (!ok) return;
-  state.calendarItems = state.calendarItems.filter((entry) => entry.id !== item.id);
+
+  if (item.source === "manual") {
+    state.calendarItems = state.calendarItems.filter((entry) => entry.id !== item.id);
+    persistCalendarItems();
+    renderAll();
+    showToast("직접 추가한 항목을 삭제했습니다.");
+    return;
+  }
+
+  const ignoredItem = {
+    id: calendarGroupId(item.title, item.category, item.month, IGNORED_CALENDAR_SOURCE),
+    title: item.title,
+    category: item.category,
+    month: item.month,
+    dates: normalizeCalendarDates(item),
+    count: calendarSessionCount(item),
+    amount: Number(item.amount || 0),
+    paid: Boolean(item.paid),
+    source: IGNORED_CALENDAR_SOURCE,
+    hidden: true,
+    updatedAt: new Date().toISOString(),
+  };
+
+  state.calendarItems = state.calendarItems.filter((entry) => {
+    if (entry.id === item.id) return false;
+    if (!isIgnoredCalendarItem(entry)) return true;
+    return calendarPreserveKey(entry) !== calendarPreserveKey(ignoredItem);
+  });
+
+  state.calendarItems.unshift(ignoredItem);
   persistCalendarItems();
   renderAll();
-  showToast("캘린더 강의 그룹을 삭제했습니다.");
+  showToast("이 항목은 다음 자동 동기화 때 다시 가져오지 않습니다.");
 }
 
 function findCalendarItem(element) {
@@ -649,7 +680,12 @@ function syncCalendarSeedData() {
 function mergeSeedEvents(replaceImported = false) {
   state.calendarItems = normalizeCalendarCollection(state.calendarItems);
   const preservedImported = new Map();
+  const ignoredKeys = new Set();
   state.calendarItems.forEach((item) => {
+    if (isIgnoredCalendarItem(item)) {
+      ignoredKeys.add(calendarPreserveKey(item));
+      return;
+    }
     if (item.source !== "manual") {
       preservedImported.set(calendarPreserveKey(item), {
         amount: Number(item.amount || 0),
@@ -659,7 +695,7 @@ function mergeSeedEvents(replaceImported = false) {
   });
 
   if (replaceImported) {
-    state.calendarItems = state.calendarItems.filter((item) => item.source === "manual");
+    state.calendarItems = state.calendarItems.filter((item) => item.source === "manual" || isIgnoredCalendarItem(item));
   }
 
   const existingById = new Map(state.calendarItems.map((item) => [item.id, item]));
@@ -667,6 +703,7 @@ function mergeSeedEvents(replaceImported = false) {
   let added = 0;
 
   groupCalendarEvents(calendarSeedEvents).forEach((group) => {
+    if (ignoredKeys.has(calendarPreserveKey(group))) return;
     const existing = existingById.get(group.id);
     if (existing) {
       mergeCalendarDates(existing, group.dates);
@@ -731,9 +768,9 @@ function addCalendarItem(event) {
   const existing = state.calendarItems.find((entry) => entry.id === item.id);
 
   if (existing) {
-    existing.count = calendarSessionCount(existing) + count;
-    existing.amount = Number(existing.amount || 0) + amount;
-    existing.paid = existing.paid && paid;
+    existing.count = count;
+    existing.amount = amount;
+    existing.paid = paid;
     existing.source = existing.source || "manual";
     existing.updatedAt = new Date().toISOString();
   } else {
@@ -1016,7 +1053,7 @@ function recordsForCashMonth(month) {
 }
 
 function calendarItemsForMonth(month) {
-  return state.calendarItems.filter((item) => item.month === month);
+  return state.calendarItems.filter((item) => item.month === month && !isIgnoredCalendarItem(item));
 }
 
 function groupCalendarEvents(events) {
@@ -1053,11 +1090,13 @@ function normalizeCalendarCollection(items) {
   const groups = new Map();
   items.filter(isValidCalendarItem).forEach((item) => {
     const manual = item.source === "manual";
-    const source = manual ? "manual" : "google-calendar-red";
+    const ignored = isIgnoredCalendarItem(item);
+    const source = manual ? "manual" : ignored ? IGNORED_CALENDAR_SOURCE : "google-calendar-red";
     const title = manual ? String(item.title || "").trim() : calendarCanonicalTitle(item.title);
     const category = item.category || guessCalendarCategory(title);
     if (
       !manual &&
+      !ignored &&
       String(item.colorId || "") !== RED_CALENDAR_COLOR_ID &&
       !isRedCalendarItem({ title, category, colorId: item.colorId })
     ) return;
@@ -1081,6 +1120,7 @@ function normalizeCalendarCollection(items) {
         amount: 0,
         paid: Boolean(item.paid),
         source,
+        hidden: ignored,
         colorId: manual ? "" : RED_CALENDAR_COLOR_ID,
         importedAt: item.importedAt,
         createdAt: item.createdAt,
@@ -1093,8 +1133,13 @@ function normalizeCalendarCollection(items) {
     group.count = dates.length ? Math.max(group.count, group.dates.length) : group.count + count;
     group.amount += amount;
     group.paid = group.paid && Boolean(item.paid);
+    group.hidden = group.hidden || ignored;
   });
   return [...groups.values()];
+}
+
+function isIgnoredCalendarItem(item) {
+  return item?.source === IGNORED_CALENDAR_SOURCE || Boolean(item?.hidden);
 }
 
 function normalizeCalendarDates(item) {
@@ -1457,7 +1502,7 @@ function isKnownRedClassTitle(title) {
 }
 
 function calendarGroupId(title, category, month, source = "google-calendar-red") {
-  const prefix = source === "manual" ? "calendar-manual" : "calendar-group";
+  const prefix = source === "manual" ? "calendar-manual" : source === IGNORED_CALENDAR_SOURCE ? "calendar-ignored" : "calendar-group";
   return `${prefix}-${month}-${slugify(calendarIdentity(title, category, source))}`;
 }
 
