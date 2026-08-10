@@ -331,6 +331,10 @@ function waitForGoogleIdentity() {
 
 async function handleGoogleAuthButtonClick() {
   if (!googleAuthReady) {
+    updateGoogleSyncUI("Google 로그인 준비 중");
+    await initGoogleCalendarAuth();
+  }
+  if (!googleAuthReady) {
     showToast("Google 로그인 준비가 아직 끝나지 않았습니다. 잠시 후 다시 눌러 주세요.");
     return;
   }
@@ -616,10 +620,10 @@ function updateGoogleSyncUI(message) {
   }
   if (els.googleAuthBtn) {
     els.googleAuthBtn.textContent = state.googleConnected ? "Google 새로고침" : "Google 연결";
-    els.googleAuthBtn.disabled = state.googleSyncRunning || !googleAuthReady;
+    els.googleAuthBtn.disabled = state.googleSyncRunning;
   }
   if (els.importCalendarBtn) {
-    els.importCalendarBtn.disabled = state.googleSyncRunning || !googleAuthReady;
+    els.importCalendarBtn.disabled = state.googleSyncRunning;
   }
 }
 
