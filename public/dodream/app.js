@@ -450,9 +450,10 @@ async function syncGoogleCalendarData({ interactive = false, forcePrompt = false
   } catch (error) {
     console.error("Failed to sync Google Calendar.", error);
     state.googleConnected = false;
-    updateGoogleSyncUI("구글 연결 필요");
+    const syncMessage = humanizeGoogleCalendarError(error);
+    updateGoogleSyncUI(syncMessage);
     if (interactive) {
-      showToast("구글 캘린더 연결 또는 권한 설정을 확인해 주세요.");
+      showToast(syncMessage);
     }
     throw error;
   } finally {
@@ -486,7 +487,7 @@ async function fetchGoogleCalendarEvents(accessToken) {
         },
       });
       if (!response.ok) {
-        throw new Error(`calendar events fetch failed: ${response.status}`);
+        throw await createGoogleApiError(response, `calendar events fetch failed: ${response.status}`);
       }
 
       const payload = await response.json();
@@ -506,7 +507,7 @@ async function fetchReadableCalendars(accessToken) {
     },
   });
   if (!response.ok) {
-    throw new Error(`calendar list fetch failed: ${response.status}`);
+    throw await createGoogleApiError(response, `calendar list fetch failed: ${response.status}`);
   }
 
   const payload = await response.json();
@@ -650,6 +651,53 @@ function handleGoogleAuthFeedback(error) {
     return;
   }
   showToast("Google 연결을 완료하지 못했습니다. 브라우저 설정을 확인해 주세요.");
+}
+
+async function createGoogleApiError(response, fallbackMessage) {
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  const reason = String(
+    payload?.error?.errors?.[0]?.reason ||
+    payload?.error?.status ||
+    ""
+  );
+  const message = String(payload?.error?.message || fallbackMessage);
+  const error = new Error(`${fallbackMessage} :: ${message}`);
+  error.status = response.status;
+  error.reason = reason;
+  error.googleMessage = message;
+  return error;
+}
+
+function humanizeGoogleCalendarError(error) {
+  const status = Number(error?.status || 0);
+  const reason = String(error?.reason || "").toLowerCase();
+  const googleMessage = String(error?.googleMessage || error?.message || "");
+
+  if (status === 403 && (reason.includes("accessnotconfigured") || googleMessage.toLowerCase().includes("api has not been used"))) {
+    return "Google Calendar API가 아직 켜져 있지 않습니다. Google Cloud에서 Calendar API를 사용 설정해 주세요.";
+  }
+  if (status === 403 && reason.includes("insufficientpermissions")) {
+    return "Google Calendar 읽기 권한이 부족합니다. 다시 연결하면서 권한 허용을 확인해 주세요.";
+  }
+  if (status === 401) {
+    return "Google 로그인 세션이 만료되었습니다. Google 연결을 다시 눌러 주세요.";
+  }
+  if (status === 404) {
+    return "읽을 수 있는 캘린더를 찾지 못했습니다.";
+  }
+  if (status === 400) {
+    return `Google 요청이 거부되었습니다. ${googleMessage}`.trim();
+  }
+  if (googleMessage) {
+    return `캘린더 연결 실패: ${googleMessage}`;
+  }
+  return "구글 캘린더 연결 또는 권한 설정을 확인해 주세요.";
 }
 
 function isLocalPreview() {
