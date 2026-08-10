@@ -153,6 +153,7 @@ let syncTimer = 0;
 let syncRequest = Promise.resolve();
 let googleTokenClient = null;
 let googleAuthReady = false;
+let googleAuthPendingTimer = 0;
 
 const els = {
   todayLabel: document.getElementById("todayLabel"),
@@ -300,6 +301,7 @@ async function initGoogleCalendarAuth() {
       console.error("Google auth error", error);
       state.googleSyncRunning = false;
       updateGoogleSyncUI("구글 연결 필요");
+      handleGoogleAuthFeedback(error);
     },
   });
 
@@ -328,6 +330,10 @@ function waitForGoogleIdentity() {
 }
 
 async function handleGoogleAuthButtonClick() {
+  if (!googleAuthReady) {
+    showToast("Google 로그인 준비가 아직 끝나지 않았습니다. 잠시 후 다시 눌러 주세요.");
+    return;
+  }
   if (state.googleConnected) {
     await syncGoogleCalendarData({ interactive: true, forcePrompt: false });
     return;
@@ -341,7 +347,9 @@ function requestGoogleAccessToken({ prompt = "", interactive = false } = {}) {
   }
 
   return new Promise((resolve, reject) => {
+    window.clearTimeout(googleAuthPendingTimer);
     googleTokenClient.callback = (response) => {
+      window.clearTimeout(googleAuthPendingTimer);
       if (response?.error) {
         reject(new Error(response.error));
         return;
@@ -359,8 +367,19 @@ function requestGoogleAccessToken({ prompt = "", interactive = false } = {}) {
     };
 
     try {
+      if (interactive) {
+        googleAuthPendingTimer = window.setTimeout(() => {
+          state.googleSyncRunning = false;
+          updateGoogleSyncUI("구글 연결 필요");
+          const localHint = isLocalPreview()
+            ? "현재 localhost 화면보다 배포 주소를 일반 Chrome에서 여는 것이 더 안정적입니다."
+            : "브라우저 팝업 차단 또는 쿠키 제한을 확인해 주세요.";
+          showToast(`Google 로그인 창이 열리지 않았습니다. ${localHint}`);
+        }, 5000);
+      }
       googleTokenClient.requestAccessToken({ prompt });
     } catch (error) {
+      window.clearTimeout(googleAuthPendingTimer);
       if (!interactive) {
         state.googleConnected = false;
       }
@@ -602,6 +621,35 @@ function updateGoogleSyncUI(message) {
   if (els.importCalendarBtn) {
     els.importCalendarBtn.disabled = state.googleSyncRunning || !googleAuthReady;
   }
+}
+
+function handleGoogleAuthFeedback(error) {
+  const message = String(error?.type || error?.message || "").toLowerCase();
+  if (message.includes("popup_failed_to_open") || message.includes("popup")) {
+    showToast("Google 로그인 창이 차단되었습니다. 일반 Chrome에서 팝업 허용 후 다시 시도해 주세요.");
+    return;
+  }
+  if (message.includes("closed")) {
+    showToast("Google 로그인 창이 닫혀 연결이 완료되지 않았습니다.");
+    return;
+  }
+  if (message.includes("access_denied")) {
+    showToast("Google 권한 허용이 취소되었습니다.");
+    return;
+  }
+  if (message.includes("idpiframe_initialization_failed")) {
+    showToast("브라우저 쿠키 또는 보안 설정 때문에 Google 로그인을 시작하지 못했습니다.");
+    return;
+  }
+  if (isLocalPreview()) {
+    showToast("localhost 화면에서는 Google 로그인이 불안정할 수 있습니다. 배포 주소를 일반 Chrome에서 다시 열어 주세요.");
+    return;
+  }
+  showToast("Google 연결을 완료하지 못했습니다. 브라우저 설정을 확인해 주세요.");
+}
+
+function isLocalPreview() {
+  return ["localhost", "127.0.0.1"].includes(window.location.hostname);
 }
 
 function updateTypeUI() {
