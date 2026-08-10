@@ -31,6 +31,8 @@ yarn-error.log*
 .env*
 *.tar.gz
 .openai/hosting.json
+.openai/site-package.tgz
+.openai/site-stage/
 
 # vercel
 .vercel
