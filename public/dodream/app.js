@@ -1,6 +1,7 @@
 ﻿const STORAGE_KEY = "dodreamMoneyNote.records.v1";
 const CALENDAR_STORAGE_KEY = "dodreamMoneyNote.calendarIncome.v1";
 const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260701.manualFixAndMayRefresh";
+const GOOGLE_AUTH_STORAGE_KEY = "dodreamMoneyNote.googleAuth.v1";
 const RED_CALENDAR_COLOR_ID = "11";
 const IGNORED_CALENDAR_SOURCE = "ignored-google-calendar-red";
 const SHARED_SYNC_URL = "/api/dodream-sync";
@@ -133,6 +134,8 @@ const redCalendarIdentities = new Set(
   calendarSeedEvents.map((event) => calendarIdentity(event.title, event.category || guessCalendarCategory(event.title)))
 );
 
+const savedGoogleAuth = loadGoogleAuthState();
+
 const state = {
   records: loadRecords(),
   calendarItems: loadCalendarItems(),
@@ -145,7 +148,8 @@ const state = {
   googleCalendarId: "primary",
   googleSyncRunning: false,
   googleConnected: false,
-  googleLastSyncAt: "",
+  googleRemembered: savedGoogleAuth.remembered,
+  googleLastSyncAt: savedGoogleAuth.lastSyncAt,
 };
 
 let syncReady = false;
@@ -222,7 +226,7 @@ async function init() {
   bindEvents();
   renderCalendarCategoryOptions();
   updateTypeUI();
-  updateGoogleSyncUI("구글 연결 준비 중");
+  updateGoogleSyncUI(state.googleRemembered ? "이전 Google 연결 복구 중" : "구글 연결 준비 중");
   await hydrateSharedState();
   await initGoogleCalendarAuth();
   syncReady = true;
@@ -300,13 +304,14 @@ async function initGoogleCalendarAuth() {
     error_callback: (error) => {
       console.error("Google auth error", error);
       state.googleSyncRunning = false;
+      state.googleConnected = false;
       updateGoogleSyncUI("구글 연결 필요");
       handleGoogleAuthFeedback(error);
     },
   });
 
   googleAuthReady = true;
-  updateGoogleSyncUI("구글 연결 가능");
+  updateGoogleSyncUI(state.googleRemembered ? "이전 Google 연결 확인 중" : "구글 연결 가능");
 }
 
 function waitForGoogleIdentity() {
@@ -367,6 +372,8 @@ function requestGoogleAccessToken({ prompt = "", interactive = false } = {}) {
       state.googleAccessToken = response.access_token;
       state.googleTokenExpiresAt = Date.now() + (Number(response.expires_in || 0) * 1000);
       state.googleConnected = true;
+      state.googleRemembered = true;
+      persistGoogleAuthState();
       resolve(response.access_token);
     };
 
@@ -398,7 +405,7 @@ async function getGoogleAccessToken({ interactive = false, forcePrompt = false }
 
   try {
     return await requestGoogleAccessToken({
-      prompt: forcePrompt ? "consent" : interactive ? "select_account" : "",
+      prompt: forcePrompt ? "consent" : interactive ? "select_account" : "none",
       interactive,
     });
   } catch (error) {
@@ -427,6 +434,8 @@ async function syncGoogleCalendarData({ interactive = false, forcePrompt = false
     const merged = mergeImportedCalendarEvents(events, true);
     state.googleLastSyncAt = new Date().toISOString();
     state.googleConnected = true;
+    state.googleRemembered = true;
+    persistGoogleAuthState();
     if (merged.changed) {
       persistCalendarItems();
       renderAll();
@@ -620,7 +629,7 @@ function updateGoogleSyncUI(message) {
     els.googleSyncStatus.textContent = message;
   }
   if (els.googleAuthBtn) {
-    els.googleAuthBtn.textContent = state.googleConnected ? "Google 새로고침" : "Google 연결";
+    els.googleAuthBtn.textContent = state.googleConnected || state.googleRemembered ? "Google 새로고침" : "Google 연결";
     els.googleAuthBtn.disabled = state.googleSyncRunning;
   }
   if (els.importCalendarBtn) {
@@ -1633,6 +1642,30 @@ function loadCalendarItems() {
   } catch {
     return [];
   }
+}
+
+function loadGoogleAuthState() {
+  try {
+    const raw = localStorage.getItem(GOOGLE_AUTH_STORAGE_KEY);
+    if (!raw) {
+      return { remembered: false, lastSyncAt: "" };
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      remembered: Boolean(parsed?.remembered),
+      lastSyncAt: typeof parsed?.lastSyncAt === "string" ? parsed.lastSyncAt : "",
+    };
+  } catch {
+    return { remembered: false, lastSyncAt: "" };
+  }
+}
+
+function persistGoogleAuthState() {
+  localStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify({
+    remembered: Boolean(state.googleRemembered),
+    lastSyncAt: state.googleLastSyncAt || "",
+  }));
 }
 
 function persistRecords() {
