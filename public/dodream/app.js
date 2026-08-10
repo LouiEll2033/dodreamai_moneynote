@@ -438,43 +438,45 @@ async function syncGoogleCalendarData({ interactive = false, forcePrompt = false
 }
 
 async function fetchGoogleCalendarEvents(accessToken) {
-  const calendarId = await fetchPrimaryTeachingCalendarId(accessToken);
+  const calendars = await fetchReadableCalendars(accessToken);
   const timeMin = new Date(`${GOOGLE_SYNC_START_DATE}T00:00:00+09:00`).toISOString();
   const timeMax = buildGoogleTimeMax();
   const events = [];
-  let pageToken = "";
+  for (const calendar of calendars) {
+    let pageToken = "";
 
-  do {
-    const url = new URL(
-      `${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events`
-    );
-    url.searchParams.set("singleEvents", "true");
-    url.searchParams.set("showDeleted", "false");
-    url.searchParams.set("maxResults", "2500");
-    url.searchParams.set("orderBy", "startTime");
-    url.searchParams.set("timeMin", timeMin);
-    url.searchParams.set("timeMax", timeMax);
-    if (pageToken) url.searchParams.set("pageToken", pageToken);
+    do {
+      const url = new URL(
+        `${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendar.id)}/events`
+      );
+      url.searchParams.set("singleEvents", "true");
+      url.searchParams.set("showDeleted", "false");
+      url.searchParams.set("maxResults", "2500");
+      url.searchParams.set("orderBy", "startTime");
+      url.searchParams.set("timeMin", timeMin);
+      url.searchParams.set("timeMax", timeMax);
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
 
-    const response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`calendar events fetch failed: ${response.status}`);
-    }
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`calendar events fetch failed: ${response.status}`);
+      }
 
-    const payload = await response.json();
-    const items = Array.isArray(payload.items) ? payload.items : [];
-    events.push(...items.map(mapGoogleEventToCalendarEvent).filter(Boolean));
-    pageToken = payload.nextPageToken || "";
-  } while (pageToken);
+      const payload = await response.json();
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      events.push(...items.map((item) => mapGoogleEventToCalendarEvent(item, calendar)).filter(Boolean));
+      pageToken = payload.nextPageToken || "";
+    } while (pageToken);
+  }
 
   return events;
 }
 
-async function fetchPrimaryTeachingCalendarId(accessToken) {
+async function fetchReadableCalendars(accessToken) {
   const response = await fetch(`${GOOGLE_CALENDAR_API_BASE}/users/me/calendarList`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -486,15 +488,26 @@ async function fetchPrimaryTeachingCalendarId(accessToken) {
 
   const payload = await response.json();
   const calendars = Array.isArray(payload.items) ? payload.items : [];
-  const preferred = calendars.find((calendar) => calendar.primary) || calendars[0];
-  const calendarId = preferred?.id || "primary";
-  state.googleCalendarId = calendarId;
-  return calendarId;
+  const readableCalendars = calendars
+    .filter((calendar) => !calendar.deleted)
+    .filter((calendar) => ["owner", "writer", "reader", "freeBusyReader"].includes(String(calendar.accessRole || "")))
+    .map((calendar) => ({
+      id: String(calendar.id || ""),
+      summary: String(calendar.summary || ""),
+      primary: Boolean(calendar.primary),
+      colorId: String(calendar.colorId || ""),
+      backgroundColor: String(calendar.backgroundColor || ""),
+    }))
+    .filter((calendar) => calendar.id);
+
+  state.googleCalendarId = readableCalendars.map((calendar) => calendar.id).join(", ");
+  return readableCalendars;
 }
 
-function mapGoogleEventToCalendarEvent(event) {
+function mapGoogleEventToCalendarEvent(event, calendar = {}) {
   if (!event || event.status === "cancelled") return null;
-  if (String(event.colorId || "") !== RED_CALENDAR_COLOR_ID) return null;
+  const effectiveColorId = String(event.colorId || calendar.colorId || "");
+  if (effectiveColorId !== RED_CALENDAR_COLOR_ID) return null;
 
   const startRaw = event.start?.dateTime || event.start?.date;
   if (!startRaw) return null;
@@ -510,8 +523,10 @@ function mapGoogleEventToCalendarEvent(event) {
     date: startDate,
     startTime: toTimeOnly(event.start?.dateTime),
     endTime: toTimeOnly(event.end?.dateTime),
-    colorId: String(event.colorId || ""),
+    colorId: effectiveColorId,
     googleEventId: String(event.id || ""),
+    googleCalendarId: String(calendar.id || ""),
+    googleCalendarName: String(calendar.summary || ""),
     source: "google-calendar-red",
     updatedAt: event.updated || new Date().toISOString(),
     endDate: toDateOnly(endRaw),
