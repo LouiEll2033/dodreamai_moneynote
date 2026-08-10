@@ -601,7 +601,9 @@ function mergeImportedCalendarEvents(events, replaceImported = false) {
   let added = 0;
 
   groupCalendarEvents(events).forEach((group) => {
-    if (ignoredKeys.has(calendarPreserveKey(group))) return;
+    const ignored = ignoredKeys.has(calendarPreserveKey(group));
+    const restorableKnownClass = isKnownRedClassTitle(group.title);
+    if (ignored && !restorableKnownClass) return;
     const existing = existingById.get(group.id);
     if (existing) {
       mergeCalendarDates(existing, group.dates);
