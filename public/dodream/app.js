@@ -188,6 +188,8 @@ const els = {
   calendarAddCount: document.getElementById("calendarAddCount"),
   calendarAddAmount: document.getElementById("calendarAddAmount"),
   calendarAddPaid: document.getElementById("calendarAddPaid"),
+  calendarAddPaidDateWrap: document.getElementById("calendarAddPaidDateWrap"),
+  calendarAddPaidDate: document.getElementById("calendarAddPaidDate"),
   typeButtons: document.querySelectorAll("[data-type]"),
   filterButtons: document.querySelectorAll("[data-filter]"),
   templateRow: document.getElementById("templateRow"),
@@ -252,7 +254,9 @@ function bindEvents() {
   els.calendarAddForm.addEventListener("submit", addCalendarItem);
   els.calendarIncomeList.addEventListener("input", updateCalendarAmount);
   els.calendarIncomeList.addEventListener("change", updateCalendarPaid);
+  els.calendarIncomeList.addEventListener("change", updateCalendarPaidDate);
   els.calendarIncomeList.addEventListener("click", deleteCalendarItem);
+  els.calendarAddPaid.addEventListener("change", toggleCalendarAddPaidDate);
 
   els.typeButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -283,6 +287,7 @@ function setDefaults() {
   const today = toDateInput(new Date());
   els.recordDate.value = today;
   els.calendarAddCount.value = "1";
+  toggleCalendarAddPaidDate();
 }
 
 async function initGoogleCalendarAuth() {
@@ -540,8 +545,6 @@ async function fetchReadableCalendars(accessToken) {
 function mapGoogleEventToCalendarEvent(event, calendar = {}) {
   if (!event || event.status === "cancelled") return null;
   const effectiveColorId = String(event.colorId || calendar.colorId || "");
-  if (effectiveColorId !== RED_CALENDAR_COLOR_ID) return null;
-
   const startRaw = event.start?.dateTime || event.start?.date;
   if (!startRaw) return null;
 
@@ -549,10 +552,13 @@ function mapGoogleEventToCalendarEvent(event, calendar = {}) {
   const startDate = toDateOnly(startRaw);
   const title = String(event.summary || "").trim();
   if (!title || !startDate) return null;
+  const category = guessCalendarCategory(title);
+  const knownClassTitle = isKnownRedClassTitle(title) || redCalendarIdentities.has(calendarIdentity(title, category));
+  if (effectiveColorId !== RED_CALENDAR_COLOR_ID && !knownClassTitle) return null;
 
   return {
     title,
-    category: guessCalendarCategory(title),
+    category,
     date: startDate,
     startTime: toTimeOnly(event.start?.dateTime),
     endTime: toTimeOnly(event.end?.dateTime),
@@ -581,6 +587,7 @@ function mergeImportedCalendarEvents(events, replaceImported = false) {
       preservedImported.set(calendarPreserveKey(item), {
         amount: Number(item.amount || 0),
         paid: Boolean(item.paid),
+        paidDate: normalizePaidDate(item.paidDate),
       });
     }
   });
@@ -610,6 +617,7 @@ function mergeImportedCalendarEvents(events, replaceImported = false) {
       ...group,
       amount: preserved?.amount || 0,
       paid: preserved?.paid || false,
+      paidDate: preserved?.paid ? preserved?.paidDate || "" : "",
       source: "google-calendar-red",
       colorId: RED_CALENDAR_COLOR_ID,
       importedAt: now,
@@ -966,9 +974,10 @@ function renderSummaryDetailItem(item) {
 }
 
 function calendarSummaryDetailItem(item) {
+  const paidDate = item.paid && item.paidDate ? ` · 입금일 ${item.paidDate}` : "";
   return {
     title: item.title,
-    meta: `${item.category} · ${calendarDateSummary(item)} · ${calendarSessionCount(item)}회`,
+    meta: `${item.category} · ${calendarDateSummary(item)} · ${calendarSessionCount(item)}회${paidDate}`,
     amount: Number(item.amount || 0),
     tone: item.paid ? "income" : "pending",
   };
@@ -1013,6 +1022,7 @@ function renderCalendarItem(item) {
   const paidClass = item.paid ? "is-paid" : "";
   const dates = calendarDateSummary(item);
   const sessions = calendarSessionCount(item);
+  const paidDate = item.paidDate || "";
   return `
     <article class="calendar-income-item ${paidClass}" data-calendar-id="${escapeAttr(item.id)}">
       <div class="calendar-info">
@@ -1027,6 +1037,10 @@ function renderCalendarItem(item) {
         <label class="paid-check">
           <input type="checkbox" data-calendar-paid ${item.paid ? "checked" : ""}>
           <span>입금 완료</span>
+        </label>
+        <label class="calendar-paid-date ${item.paid ? "" : "is-hidden"}">
+          <span>입금일</span>
+          <input type="date" data-calendar-paid-date value="${escapeAttr(paidDate)}">
         </label>
         <button class="mini-icon calendar-delete-button" type="button" data-calendar-delete title="삭제">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>
@@ -1054,10 +1068,21 @@ function updateCalendarPaid(event) {
   const item = findCalendarItem(checkbox);
   if (!item) return;
   item.paid = checkbox.checked;
+  item.paidDate = item.paid ? normalizePaidDate(item.paidDate) || todayDateInputValue() : "";
   persistCalendarItems();
   renderSummary();
   renderCalendarIncome();
   showToast(item.paid ? "입금 완료로 표시했습니다." : "미입금으로 변경했습니다.");
+}
+
+function updateCalendarPaidDate(event) {
+  const input = event.target.closest("[data-calendar-paid-date]");
+  if (!input) return;
+  const item = findCalendarItem(input);
+  if (!item) return;
+  item.paidDate = normalizePaidDate(input.value);
+  persistCalendarItems();
+  renderSummary();
 }
 
 function deleteCalendarItem(event) {
@@ -1134,6 +1159,7 @@ function addCalendarItem(event) {
   const count = Math.max(1, Math.floor(Number(els.calendarAddCount.value) || 1));
   const amount = Math.max(0, Number(els.calendarAddAmount.value) || 0);
   const paid = els.calendarAddPaid.checked;
+  const paidDate = paid ? normalizePaidDate(els.calendarAddPaidDate.value) || todayDateInputValue() : "";
   const item = {
     id: calendarGroupId(title, category, state.month, "manual"),
     title,
@@ -1143,6 +1169,7 @@ function addCalendarItem(event) {
     count,
     amount,
     paid,
+    paidDate,
     source: "manual",
     createdAt: new Date().toISOString(),
   };
@@ -1152,6 +1179,7 @@ function addCalendarItem(event) {
     existing.count = count;
     existing.amount = amount;
     existing.paid = paid;
+    existing.paidDate = paidDate;
     existing.source = existing.source || "manual";
     existing.updatedAt = new Date().toISOString();
   } else {
@@ -1162,6 +1190,8 @@ function addCalendarItem(event) {
   els.calendarAddForm.reset();
   els.calendarAddCategory.value = category;
   els.calendarAddCount.value = "1";
+  els.calendarAddPaidDate.value = "";
+  toggleCalendarAddPaidDate();
   renderAll();
   showToast(existing ? "기존 강의 그룹에 합쳤습니다." : "강의 그룹을 추가했습니다.");
 }
@@ -1396,7 +1426,7 @@ function exportCsv() {
       "캘린더수익",
       item.paid ? "입금완료" : "미입금",
       item.month,
-      item.paid ? item.month : "",
+      item.paid ? item.paidDate || "" : "",
       item.title,
       item.category,
       "",
@@ -1490,6 +1520,7 @@ function normalizeCalendarCollection(items) {
     const id = calendarGroupId(title, category, month, source);
     const amount = Number(item.amount || 0);
     const count = Math.max(Number(item.count || 0), dates.length || 1);
+    const paidDate = normalizePaidDate(item.paidDate);
     if (!groups.has(id)) {
       groups.set(id, {
         id,
@@ -1500,6 +1531,7 @@ function normalizeCalendarCollection(items) {
         count: 0,
         amount: 0,
         paid: Boolean(item.paid),
+        paidDate: Boolean(item.paid) ? paidDate : "",
         source,
         hidden: ignored,
         colorId: manual ? "" : RED_CALENDAR_COLOR_ID,
@@ -1514,6 +1546,11 @@ function normalizeCalendarCollection(items) {
     group.count = dates.length ? Math.max(group.count, group.dates.length) : group.count + count;
     group.amount += amount;
     group.paid = group.paid && Boolean(item.paid);
+    if (group.paid) {
+      group.paidDate = maxDateString(group.paidDate, paidDate);
+    } else {
+      group.paidDate = "";
+    }
     group.hidden = group.hidden || ignored;
   });
   return [...groups.values()];
@@ -1540,6 +1577,30 @@ function normalizeCalendarDates(item) {
     })
     .filter((entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry.date))
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function normalizePaidDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
+}
+
+function maxDateString(a, b) {
+  if (!a) return b || "";
+  if (!b) return a || "";
+  return a >= b ? a : b;
+}
+
+function todayDateInputValue() {
+  return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+}
+
+function toggleCalendarAddPaidDate() {
+  const visible = Boolean(els.calendarAddPaid.checked);
+  els.calendarAddPaidDateWrap.hidden = !visible;
+  if (visible) {
+    els.calendarAddPaidDate.value = normalizePaidDate(els.calendarAddPaidDate.value) || todayDateInputValue();
+  } else {
+    els.calendarAddPaidDate.value = "";
+  }
 }
 
 function mergeCalendarDates(group, dates) {

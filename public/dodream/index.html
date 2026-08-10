@@ -8,7 +8,7 @@
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/app-icon.svg">
     <link rel="apple-touch-icon" href="/app-icon.svg">
-    <link rel="stylesheet" href="./styles.css?v=20260810-1">
+    <link rel="stylesheet" href="./styles.css?v=20260810-2">
   </head>
   <body>
     <div class="app-shell">
@@ -137,6 +137,10 @@
                 <input id="calendarAddPaid" type="checkbox">
                 <span>입금 완료</span>
               </label>
+              <label id="calendarAddPaidDateWrap" class="calendar-add-paid-date" hidden>
+                <span>입금일</span>
+                <input id="calendarAddPaidDate" type="date">
+              </label>
               <button class="primary-button" type="submit">추가</button>
             </form>
           </details>
@@ -240,6 +244,6 @@
       window.DODREAM_GOOGLE_CLIENT_ID = "426400397280-i5lfl5hhks738ebgdgp3fnaifvnfjg02.apps.googleusercontent.com";
     </script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
-    <script src="./app.js?v=20260810-2"></script>
+    <script src="./app.js?v=20260810-3"></script>
   </body>
 </html>

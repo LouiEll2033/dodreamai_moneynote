@@ -570,6 +570,10 @@ button:focus-visible {
   min-height: 42px;
 }
 
+.calendar-add-paid-date {
+  grid-column: 1 / -1;
+}
+
 .calendar-add-paid input {
   width: 18px;
   min-height: 18px;
@@ -637,10 +641,10 @@ button:focus-visible {
 }
 
 .calendar-item-actions {
-  display: flex;
+  display: grid;
   grid-column: 1 / -1;
   align-items: center;
-  justify-content: space-between;
+  grid-template-columns: 1fr minmax(116px, 148px) auto;
   gap: 8px;
 }
 
@@ -659,6 +663,25 @@ button:focus-visible {
   min-height: 18px;
   height: 18px;
   accent-color: var(--teal);
+}
+
+.calendar-paid-date {
+  display: grid;
+  gap: 4px;
+}
+
+.calendar-paid-date span {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.calendar-paid-date input {
+  min-height: 34px;
+  padding: 6px 7px;
+}
+
+.calendar-paid-date.is-hidden {
+  display: none;
 }
 
 .calendar-delete-button {
@@ -1087,6 +1110,10 @@ button:focus-visible {
 
   .calendar-income-item {
     grid-template-columns: minmax(0, 1fr) 88px;
+  }
+
+  .calendar-item-actions {
+    grid-template-columns: 1fr;
   }
 
   .money-item {
