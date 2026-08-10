@@ -4,6 +4,11 @@ const CALENDAR_SEED_VERSION_KEY = "dodreamMoneyNote.calendarSeed.v20260701.manua
 const RED_CALENDAR_COLOR_ID = "11";
 const IGNORED_CALENDAR_SOURCE = "ignored-google-calendar-red";
 const SHARED_SYNC_URL = "/api/dodream-sync";
+const GOOGLE_CLIENT_ID = window.DODREAM_GOOGLE_CLIENT_ID || "";
+const GOOGLE_CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.readonly";
+const GOOGLE_CALENDAR_API_BASE = "https://www.googleapis.com/calendar/v3";
+const GOOGLE_SYNC_START_DATE = "2026-05-01";
+const GOOGLE_SYNC_LOOKAHEAD_MONTHS = 18;
 
 const categories = {
   income: [
@@ -135,11 +140,19 @@ const state = {
   month: toMonth(new Date()),
   filter: "all",
   summaryFocus: "",
+  googleAccessToken: "",
+  googleTokenExpiresAt: 0,
+  googleCalendarId: "primary",
+  googleSyncRunning: false,
+  googleConnected: false,
+  googleLastSyncAt: "",
 };
 
 let syncReady = false;
 let syncTimer = 0;
 let syncRequest = Promise.resolve();
+let googleTokenClient = null;
+let googleAuthReady = false;
 
 const els = {
   todayLabel: document.getElementById("todayLabel"),
@@ -162,6 +175,8 @@ const els = {
   calendarIncomeList: document.getElementById("calendarIncomeList"),
   importCalendarBtn: document.getElementById("importCalendarBtn"),
   clearCalendarMonthBtn: document.getElementById("clearCalendarMonthBtn"),
+  googleAuthBtn: document.getElementById("googleAuthBtn"),
+  googleSyncStatus: document.getElementById("googleSyncStatus"),
   calendarAddForm: document.getElementById("calendarAddForm"),
   calendarAddTitle: document.getElementById("calendarAddTitle"),
   calendarAddCategory: document.getElementById("calendarAddCategory"),
@@ -206,9 +221,11 @@ async function init() {
   bindEvents();
   renderCalendarCategoryOptions();
   updateTypeUI();
+  updateGoogleSyncUI("구글 연결 준비 중");
   await hydrateSharedState();
+  await initGoogleCalendarAuth();
   syncReady = true;
-  autoSyncCalendarOnOpen();
+  await autoSyncCalendarOnOpen();
   renderAll();
 }
 
@@ -223,11 +240,10 @@ function bindEvents() {
     button.addEventListener("click", () => toggleSummaryDetail(button.dataset.summary || ""));
   });
   els.importCalendarBtn.addEventListener("click", () => {
-    const { added, changed } = syncCalendarSeedData();
-    if (changed) renderAll();
-    showToast(added ? `${added}개 강의 그룹을 다시 불러왔습니다.` : "현재 기준으로 다시 불러왔습니다.");
+    syncGoogleCalendarData({ interactive: true });
   });
   els.clearCalendarMonthBtn.addEventListener("click", clearCalendarMonth);
+  els.googleAuthBtn.addEventListener("click", handleGoogleAuthButtonClick);
   els.calendarAddForm.addEventListener("submit", addCalendarItem);
   els.calendarIncomeList.addEventListener("input", updateCalendarAmount);
   els.calendarIncomeList.addEventListener("change", updateCalendarPaid);
@@ -262,6 +278,315 @@ function setDefaults() {
   const today = toDateInput(new Date());
   els.recordDate.value = today;
   els.calendarAddCount.value = "1";
+}
+
+async function initGoogleCalendarAuth() {
+  if (!GOOGLE_CLIENT_ID) {
+    updateGoogleSyncUI("Client ID 없음");
+    return;
+  }
+
+  const loaded = await waitForGoogleIdentity();
+  if (!loaded || !window.google?.accounts?.oauth2) {
+    updateGoogleSyncUI("Google 인증 로드 실패");
+    return;
+  }
+
+  googleTokenClient = window.google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_CALENDAR_SCOPE,
+    callback: () => {},
+    error_callback: (error) => {
+      console.error("Google auth error", error);
+      state.googleSyncRunning = false;
+      updateGoogleSyncUI("구글 연결 필요");
+    },
+  });
+
+  googleAuthReady = true;
+  updateGoogleSyncUI("구글 연결 가능");
+}
+
+function waitForGoogleIdentity() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve(true);
+
+  return new Promise((resolve) => {
+    let attempts = 0;
+    const timer = window.setInterval(() => {
+      attempts += 1;
+      if (window.google?.accounts?.oauth2) {
+        window.clearInterval(timer);
+        resolve(true);
+        return;
+      }
+      if (attempts >= 60) {
+        window.clearInterval(timer);
+        resolve(false);
+      }
+    }, 250);
+  });
+}
+
+async function handleGoogleAuthButtonClick() {
+  if (state.googleConnected) {
+    await syncGoogleCalendarData({ interactive: true, forcePrompt: false });
+    return;
+  }
+  await syncGoogleCalendarData({ interactive: true, forcePrompt: true });
+}
+
+function requestGoogleAccessToken({ prompt = "", interactive = false } = {}) {
+  if (!googleAuthReady || !googleTokenClient) {
+    return Promise.reject(new Error("Google auth client is not ready."));
+  }
+
+  return new Promise((resolve, reject) => {
+    googleTokenClient.callback = (response) => {
+      if (response?.error) {
+        reject(new Error(response.error));
+        return;
+      }
+
+      if (!response?.access_token) {
+        reject(new Error("No access token returned."));
+        return;
+      }
+
+      state.googleAccessToken = response.access_token;
+      state.googleTokenExpiresAt = Date.now() + (Number(response.expires_in || 0) * 1000);
+      state.googleConnected = true;
+      resolve(response.access_token);
+    };
+
+    try {
+      googleTokenClient.requestAccessToken({ prompt });
+    } catch (error) {
+      if (!interactive) {
+        state.googleConnected = false;
+      }
+      reject(error);
+    }
+  });
+}
+
+async function getGoogleAccessToken({ interactive = false, forcePrompt = false } = {}) {
+  const stillValid = state.googleAccessToken && Date.now() < state.googleTokenExpiresAt - 60 * 1000;
+  if (stillValid) return state.googleAccessToken;
+
+  try {
+    return await requestGoogleAccessToken({
+      prompt: forcePrompt ? "consent" : interactive ? "select_account" : "",
+      interactive,
+    });
+  } catch (error) {
+    state.googleConnected = false;
+    throw error;
+  }
+}
+
+async function autoSyncCalendarOnOpen() {
+  try {
+    await syncGoogleCalendarData({ interactive: false, silent: true });
+  } catch (error) {
+    console.warn("Automatic Google Calendar sync skipped.", error);
+  }
+}
+
+async function syncGoogleCalendarData({ interactive = false, forcePrompt = false, silent = false } = {}) {
+  if (state.googleSyncRunning) return;
+
+  state.googleSyncRunning = true;
+  updateGoogleSyncUI("캘린더 확인 중");
+
+  try {
+    const accessToken = await getGoogleAccessToken({ interactive, forcePrompt });
+    const events = await fetchGoogleCalendarEvents(accessToken);
+    const merged = mergeImportedCalendarEvents(events, true);
+    state.googleLastSyncAt = new Date().toISOString();
+    state.googleConnected = true;
+    if (merged.changed) {
+      persistCalendarItems();
+      renderAll();
+    } else if (!silent) {
+      renderCalendarIncome();
+    }
+
+    updateGoogleSyncUI(
+      merged.added > 0
+        ? `${merged.added}개 그룹 동기화`
+        : `동기화 완료 ${formatTimeLabel(state.googleLastSyncAt)}`
+    );
+
+    if (interactive) {
+      showToast(
+        merged.added > 0
+          ? `${merged.added}개 강의 그룹을 가져왔습니다.`
+          : "새로 가져올 강의 일정이 없습니다."
+      );
+    }
+  } catch (error) {
+    console.error("Failed to sync Google Calendar.", error);
+    state.googleConnected = false;
+    updateGoogleSyncUI("구글 연결 필요");
+    if (interactive) {
+      showToast("구글 캘린더 연결 또는 권한 설정을 확인해 주세요.");
+    }
+    throw error;
+  } finally {
+    state.googleSyncRunning = false;
+  }
+}
+
+async function fetchGoogleCalendarEvents(accessToken) {
+  const calendarId = await fetchPrimaryTeachingCalendarId(accessToken);
+  const timeMin = new Date(`${GOOGLE_SYNC_START_DATE}T00:00:00+09:00`).toISOString();
+  const timeMax = buildGoogleTimeMax();
+  const events = [];
+  let pageToken = "";
+
+  do {
+    const url = new URL(
+      `${GOOGLE_CALENDAR_API_BASE}/calendars/${encodeURIComponent(calendarId)}/events`
+    );
+    url.searchParams.set("singleEvents", "true");
+    url.searchParams.set("showDeleted", "false");
+    url.searchParams.set("maxResults", "2500");
+    url.searchParams.set("orderBy", "startTime");
+    url.searchParams.set("timeMin", timeMin);
+    url.searchParams.set("timeMax", timeMax);
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`calendar events fetch failed: ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    events.push(...items.map(mapGoogleEventToCalendarEvent).filter(Boolean));
+    pageToken = payload.nextPageToken || "";
+  } while (pageToken);
+
+  return events;
+}
+
+async function fetchPrimaryTeachingCalendarId(accessToken) {
+  const response = await fetch(`${GOOGLE_CALENDAR_API_BASE}/users/me/calendarList`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`calendar list fetch failed: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const calendars = Array.isArray(payload.items) ? payload.items : [];
+  const preferred = calendars.find((calendar) => calendar.primary) || calendars[0];
+  const calendarId = preferred?.id || "primary";
+  state.googleCalendarId = calendarId;
+  return calendarId;
+}
+
+function mapGoogleEventToCalendarEvent(event) {
+  if (!event || event.status === "cancelled") return null;
+  if (String(event.colorId || "") !== RED_CALENDAR_COLOR_ID) return null;
+
+  const startRaw = event.start?.dateTime || event.start?.date;
+  if (!startRaw) return null;
+
+  const endRaw = event.end?.dateTime || event.end?.date || startRaw;
+  const startDate = toDateOnly(startRaw);
+  const title = String(event.summary || "").trim();
+  if (!title || !startDate) return null;
+
+  return {
+    title,
+    category: guessCalendarCategory(title),
+    date: startDate,
+    startTime: toTimeOnly(event.start?.dateTime),
+    endTime: toTimeOnly(event.end?.dateTime),
+    colorId: String(event.colorId || ""),
+    googleEventId: String(event.id || ""),
+    source: "google-calendar-red",
+    updatedAt: event.updated || new Date().toISOString(),
+    endDate: toDateOnly(endRaw),
+  };
+}
+
+function mergeImportedCalendarEvents(events, replaceImported = false) {
+  state.calendarItems = normalizeCalendarCollection(state.calendarItems);
+  const before = JSON.stringify(state.calendarItems);
+  const preservedImported = new Map();
+  const ignoredKeys = new Set();
+
+  state.calendarItems.forEach((item) => {
+    if (isIgnoredCalendarItem(item)) {
+      ignoredKeys.add(calendarPreserveKey(item));
+      return;
+    }
+    if (item.source !== "manual") {
+      preservedImported.set(calendarPreserveKey(item), {
+        amount: Number(item.amount || 0),
+        paid: Boolean(item.paid),
+      });
+    }
+  });
+
+  if (replaceImported) {
+    state.calendarItems = state.calendarItems.filter((item) => item.source === "manual" || isIgnoredCalendarItem(item));
+  }
+
+  const existingById = new Map(state.calendarItems.map((item) => [item.id, item]));
+  const now = new Date().toISOString();
+  let added = 0;
+
+  groupCalendarEvents(events).forEach((group) => {
+    if (ignoredKeys.has(calendarPreserveKey(group))) return;
+    const existing = existingById.get(group.id);
+    if (existing) {
+      mergeCalendarDates(existing, group.dates);
+      existing.count = Math.max(calendarSessionCount(existing), group.count);
+      existing.source = "google-calendar-red";
+      existing.colorId = RED_CALENDAR_COLOR_ID;
+      existing.updatedAt = now;
+      return;
+    }
+
+    const preserved = preservedImported.get(calendarPreserveKey(group));
+    state.calendarItems.push({
+      ...group,
+      amount: preserved?.amount || 0,
+      paid: preserved?.paid || false,
+      source: "google-calendar-red",
+      colorId: RED_CALENDAR_COLOR_ID,
+      importedAt: now,
+      updatedAt: now,
+    });
+    added += 1;
+  });
+
+  state.calendarItems = normalizeCalendarCollection(state.calendarItems);
+  const after = JSON.stringify(state.calendarItems);
+  localStorage.setItem(CALENDAR_SEED_VERSION_KEY, now);
+  return { added, changed: before !== after };
+}
+
+function updateGoogleSyncUI(message) {
+  if (els.googleSyncStatus) {
+    els.googleSyncStatus.textContent = message;
+  }
+  if (els.googleAuthBtn) {
+    els.googleAuthBtn.textContent = state.googleConnected ? "Google 새로고침" : "Google 연결";
+    els.googleAuthBtn.disabled = state.googleSyncRunning || !googleAuthReady;
+  }
+  if (els.importCalendarBtn) {
+    els.importCalendarBtn.disabled = state.googleSyncRunning || !googleAuthReady;
+  }
 }
 
 function updateTypeUI() {
@@ -658,74 +983,6 @@ function findCalendarItem(element) {
   const wrapper = element.closest("[data-calendar-id]");
   if (!wrapper) return null;
   return state.calendarItems.find((item) => item.id === wrapper.dataset.calendarId);
-}
-
-function autoSyncCalendarOnOpen() {
-  const { changed } = syncCalendarSeedData();
-  if (changed) {
-    renderAll();
-  }
-}
-
-function syncCalendarSeedData() {
-  const before = JSON.stringify(normalizeCalendarCollection(state.calendarItems));
-  const added = mergeSeedEvents(true);
-  const after = JSON.stringify(normalizeCalendarCollection(state.calendarItems));
-  const changed = before !== after;
-  if (changed) persistCalendarItems();
-  localStorage.setItem(CALENDAR_SEED_VERSION_KEY, new Date().toISOString());
-  return { added, changed };
-}
-
-function mergeSeedEvents(replaceImported = false) {
-  state.calendarItems = normalizeCalendarCollection(state.calendarItems);
-  const preservedImported = new Map();
-  const ignoredKeys = new Set();
-  state.calendarItems.forEach((item) => {
-    if (isIgnoredCalendarItem(item)) {
-      ignoredKeys.add(calendarPreserveKey(item));
-      return;
-    }
-    if (item.source !== "manual") {
-      preservedImported.set(calendarPreserveKey(item), {
-        amount: Number(item.amount || 0),
-        paid: Boolean(item.paid),
-      });
-    }
-  });
-
-  if (replaceImported) {
-    state.calendarItems = state.calendarItems.filter((item) => item.source === "manual" || isIgnoredCalendarItem(item));
-  }
-
-  const existingById = new Map(state.calendarItems.map((item) => [item.id, item]));
-  const now = new Date().toISOString();
-  let added = 0;
-
-  groupCalendarEvents(calendarSeedEvents).forEach((group) => {
-    if (ignoredKeys.has(calendarPreserveKey(group))) return;
-    const existing = existingById.get(group.id);
-    if (existing) {
-      mergeCalendarDates(existing, group.dates);
-      existing.count = Math.max(calendarSessionCount(existing), group.count);
-      existing.source = existing.source || "google-calendar-red";
-      existing.colorId = RED_CALENDAR_COLOR_ID;
-    } else {
-      const preserved = preservedImported.get(calendarPreserveKey(group));
-      state.calendarItems.push({
-        ...group,
-        amount: preserved?.amount || 0,
-        paid: preserved?.paid || false,
-        source: "google-calendar-red",
-        colorId: RED_CALENDAR_COLOR_ID,
-        importedAt: now,
-      });
-      added += 1;
-    }
-  });
-
-  state.calendarItems = normalizeCalendarCollection(state.calendarItems);
-  return added;
 }
 
 function calendarPreserveKey(item) {
@@ -1368,6 +1625,17 @@ function formatFullDate(value) {
   return `${month}.${date}(${day})`;
 }
 
+function formatTimeLabel(value) {
+  if (!value) return "";
+  return new Date(value).toLocaleString("ko-KR", {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 function toMonth(value) {
   if (typeof value === "string" && /^\d{4}-\d{2}/.test(value)) {
     return value.slice(0, 7);
@@ -1383,6 +1651,32 @@ function toDateInput(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function toDateOnly(value) {
+  if (!value) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return toDateInput(date);
+}
+
+function toTimeOnly(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function buildGoogleTimeMax() {
+  const start = new Date(`${GOOGLE_SYNC_START_DATE}T00:00:00+09:00`);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + GOOGLE_SYNC_LOOKAHEAD_MONTHS);
+  end.setDate(0);
+  end.setHours(23, 59, 59, 999);
+  return end.toISOString();
 }
 
 function typeLabel(type) {

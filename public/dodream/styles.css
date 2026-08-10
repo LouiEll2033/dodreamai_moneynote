@@ -102,7 +102,24 @@ h1 {
 
 .header-actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
+}
+
+.google-sync-box {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sync-status {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-align: right;
 }
 
 .icon-button {
@@ -1031,6 +1048,24 @@ button:focus-visible {
 @media (max-width: 420px) {
   .app-shell {
     padding-inline: 8px;
+  }
+
+  .app-header {
+    align-items: flex-start;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .google-sync-box {
+    width: 100%;
+    justify-items: start;
+  }
+
+  .sync-status {
+    text-align: left;
   }
 
   .form-grid {

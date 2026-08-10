@@ -21,6 +21,10 @@
           </div>
         </div>
         <div class="header-actions" aria-label="데이터 관리">
+          <div class="google-sync-box" aria-live="polite">
+            <button class="text-button compact" id="googleAuthBtn" type="button">Google 연결</button>
+            <span id="googleSyncStatus" class="sync-status">캘린더 연결 전</span>
+          </div>
           <button class="icon-button" id="exportJsonBtn" type="button" title="백업">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3v10m0 0 4-4m-4 4-4-4M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/>
@@ -53,7 +57,7 @@
           </button>
         </section>
 
-        <section class="summary-grid" aria-label="월별 현황">
+        <section class="summary-grid" aria-label="월간 현황">
           <button class="metric-card metric-income" type="button" data-summary="received" aria-expanded="false">
             <span>입금</span>
             <strong id="receivedIncome">0원</strong>
@@ -85,9 +89,9 @@
           <div class="section-heading">
             <div>
               <h2 id="calendarIncomeTitle">캘린더 강의 수익</h2>
-              <p class="section-note">빨간색 강의 일정 · 월별 그룹 수익</p>
+              <p class="section-note">토마토색 강의 일정만 월별 그룹으로 묶어 보여줍니다.</p>
             </div>
-            <button class="text-button compact" id="importCalendarBtn" type="button">일정 가져오기</button>
+            <button class="text-button compact" id="importCalendarBtn" type="button">지금 동기화</button>
           </div>
 
           <div class="calendar-summary-grid" aria-label="캘린더 수익 요약">
@@ -106,7 +110,7 @@
           </div>
 
           <div class="calendar-toolbar">
-            <span id="calendarIncomeCount" class="count-pill">0건</span>
+            <span id="calendarIncomeCount" class="count-pill">0개</span>
             <button class="text-button compact" id="clearCalendarMonthBtn" type="button">이번 달 비우기</button>
           </div>
 
@@ -210,7 +214,7 @@
                 <div id="incomeBars" class="bar-list"></div>
               </div>
               <div>
-                <h3>지출/투자 항목</h3>
+                <h3>지출·투자 항목</h3>
                 <div id="outgoingBars" class="bar-list"></div>
               </div>
             </div>
@@ -232,6 +236,10 @@
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script>
+      window.DODREAM_GOOGLE_CLIENT_ID = "426400397280-i5lfl5hhks738ebgdgp3fnaifvnfjg02.apps.googleusercontent.com";
+    </script>
+    <script async defer src="https://accounts.google.com/gsi/client"></script>
     <script src="./app.js"></script>
   </body>
 </html>
